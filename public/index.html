@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdBrief</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">Ad<em>Brief</em></div>
+    <nav class="tabnav">
+      <button class="tab active" data-panel="brief">Brief</button>
+      <button class="tab" data-panel="history">History</button>
+      <button class="tab" data-panel="howto">How to Use</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="status-badge" id="statusBadge">
+        <span class="dot idle"></span>
+        <span id="statusText">No data loaded</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- SIDEBAR (hidden on howto tab) -->
+    <aside class="sidebar" id="sidebar">
+
+      <div class="sgroup">
+        <div class="slabel">Data source</div>
+        <div class="seg">
+          <button class="seg-btn active" data-tab="file">Upload file</button>
+          <button class="seg-btn" data-tab="sheets">Google Sheet</button>
+        </div>
+
+        <div id="tab-file">
+          <label class="file-drop" id="fileDrop">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" hidden />
+            <span class="drop-icon">📂</span>
+            <span class="drop-main">Drop file or click to browse</span>
+            <span class="drop-sub">CSV, XLS or XLSX</span>
+          </label>
+        </div>
+
+        <div id="tab-sheets" class="hidden">
+          <label class="slabel" style="margin-bottom:6px">Sheet CSV URL</label>
+          <input type="url" id="sheetsUrl" class="input" placeholder="Paste published CSV URL…" />
+          <button class="btn-outline" id="loadSheetsBtn" style="margin-top:8px;width:100%">Load sheet</button>
+        </div>
+      </div>
+
+      <div class="sgroup" id="uploadPanel">
+        <div class="slabel">Generate</div>
+        <div class="upload-status" id="uploadStatus"></div>
+        <button class="btn-primary" id="generateBtn" disabled>Generate brief</button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+      <!-- BRIEF PANEL -->
+      <div class="panel-view active" id="panel-brief">
+
+        <!-- Empty state -->
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">No brief yet</div>
+          <div class="empty-sub">Upload your Meta export and click Generate brief.</div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading hidden" id="loading">
+          <div class="spinner"></div>
+          <p>Analysing your ads and writing the brief…</p>
+        </div>
+
+        <!-- Brief output -->
+        <div id="briefOutput" class="hidden">
+          <div class="content-header">
+            <div>
+              <h1 id="briefTitle">Weekly Creative Brief</h1>
+              <div class="content-meta" id="briefMeta"></div>
+            </div>
+            <button class="btn-outline no-print" onclick="window.print()">Export PDF</button>
+          </div>
+
+          <div class="brief-grid">
+
+            <div class="bcard summary-card">
+              <div class="bcard-title"><span class="ico ico-blue">✦</span>Overview</div>
+              <p id="briefSummary" class="summary-text"></p>
+            </div>
+
+            <div class="bcard">
+              <div class="bcard-title"><span class="ico ico-green">↑</span>Top performers</div>
+              <div id="topPerformers" class="ad-list"></div>
+            </div>
+
+            <div class="bcard">
+              <div class="bcard-title"><span class="ico ico-blue">+</span>Make these next</div>
+              <div id="makeNext" class="ad-list"></div>
+            </div>
+
+            <div class="bcard">
+              <div class="bcard-title"><span class="ico ico-orange">!</span>Fatigue alerts</div>
+              <div id="fatigueAlerts" class="ad-list"></div>
+            </div>
+
+            <div class="bcard">
+              <div class="bcard-title"><span class="ico ico-orange">↓</span>Underperformers</div>
+              <div id="underperformers" class="ad-list"></div>
+            </div>
+
+            <div class="bcard">
+              <div class="bcard-title"><span class="ico ico-red">✕</span>Retire now</div>
+              <div id="retireNow" class="ad-list"></div>
+            </div>
+
+            <div class="bcard no-print">
+              <div class="bcard-title"><span class="ico" style="background:var(--surface3);color:var(--label4)">💬</span>Team comments</div>
+              <div id="commentsList"></div>
+              <div class="comment-form">
+                <input type="text" id="commentAuthor" class="input" placeholder="Your name" maxlength="50" />
+                <textarea id="commentText" class="input" placeholder="Leave a note for the team…" maxlength="500"></textarea>
+                <button class="btn-outline" id="submitComment">Post comment</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY PANEL -->
+      <div class="panel-view" id="panel-history">
+        <div class="content-header">
+          <h1>History</h1>
+        </div>
+        <div id="historyGrid" class="history-grid"></div>
+        <div class="empty-state hidden" id="historyEmpty">
+          <div class="empty-icon">🗂️</div>
+          <div class="empty-title">No history yet</div>
+          <div class="empty-sub">Generated briefs will appear here week by week.</div>
+        </div>
+      </div>
+
+      <!-- HOW TO USE PANEL -->
+      <div class="panel-view" id="panel-howto">
+        <div class="content-header">
+          <h1>How to Use</h1>
+        </div>
+        <div class="howto-grid">
+
+          <div class="howto-card">
+            <div class="howto-step">1</div>
+            <h3>Export from Meta Ads Manager</h3>
+            <p>Open Meta Ads Manager. Switch to the <strong>Ads</strong> view (not campaigns or ad sets). Set your date range to the past 7 days. Click <strong>Export → Export Table Data</strong> and download as CSV or Excel.</p>
+          </div>
+
+          <div class="howto-card">
+            <div class="howto-step">2</div>
+            <h3>Upload the file</h3>
+            <p>On the Brief tab, drag and drop your exported file into the upload area on the left, or click to browse. The app will automatically read all your ad names, spend, ROAS, CTR and other metrics.</p>
+          </div>
+
+          <div class="howto-card">
+            <div class="howto-step">3</div>
+            <h3>Generate the brief</h3>
+            <p>Once your file is loaded, click <strong>Generate brief</strong>. The AI will analyse your ads and produce a plain-English brief in a few seconds — no metrics knowledge needed.</p>
+          </div>
+
+          <div class="howto-card">
+            <div class="howto-step">4</div>
+            <h3>Read the brief</h3>
+            <p>The brief is split into five sections: <strong>Top performers</strong> (scale these), <strong>Make next</strong> (new ideas based on what's working), <strong>Fatigue alerts</strong> (showing ad exhaustion), <strong>Underperformers</strong> (fix or pause), and <strong>Retire now</strong> (kill immediately).</p>
+          </div>
+
+          <div class="howto-card">
+            <div class="howto-step">5</div>
+            <h3>Leave comments</h3>
+            <p>The whole team can read the brief and leave comments — feedback, ideas, questions. Scroll to the bottom of the brief to post. Comments are saved and visible to everyone.</p>
+          </div>
+
+          <div class="howto-card">
+            <div class="howto-step">6</div>
+            <h3>Export as PDF</h3>
+            <p>Click <strong>Export PDF</strong> in the top right of the brief to print or save it as a PDF. Use this to share in Slack, attach to briefs, or save for records. Comments and the sidebar won't appear in the PDF.</p>
+          </div>
+
+          <div class="howto-card howto-tip">
+            <div class="howto-step tip">💡</div>
+            <h3>Using Google Sheets instead</h3>
+            <p>If you paste your Meta data into a shared Google Sheet, publish it as CSV (File → Share → Publish to web → CSV), then paste that URL into the Google Sheet tab on the left. The app fetches it automatically — no file upload needed.</p>
+          </div>
+
+          <div class="howto-card howto-tip">
+            <div class="howto-step tip">💡</div>
+            <h3>View-only link for the team</h3>
+            <p>Share <strong>yoursite.com?role=summary</strong> with the team. This hides the upload controls so they can only read and comment — not accidentally change anything.</p>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+PRODUCT HANDOFF DOCUMENT
+Creative Performance Bridge
+A lightweight creative-to-media-buyer feedback tool
+Built for coaches and consultants running paid ads
+PREPARED BY
+Paolo & Diana	PREPARED FOR
+Claude Code
+
+VERSION
+1.0 — Concept Handoff	DATE
+May 4, 2026
+ 
+1. Product Overview
+Creative Performance Bridge is a lightweight web dashboard that translates ad performance data from a media buyer into clear creative briefs for a designer — automatically. It is the missing link between the person running the ads and the person making the ads.
+The closest comparable product is Motion (motionapp.com), which starts at $250/month and is built for DTC e-commerce brands spending $25K+ per month on ads. Creative Performance Bridge targets a completely different segment: coaches, consultants, and expertise-based businesses running smaller ad budgets with lean teams.
+
+2. The Problem
+In small performance marketing teams, the media buyer and the creative designer work in separate worlds:
+•	The media buyer sees the numbers but communicates them in spreadsheets and dashboards that designers cannot interpret into creative decisions.
+•	The designer produces creatives without knowing which hooks, formats, or angles are actually performing — and why.
+•	Insights live in the media buyer's head or get partially communicated during weekly calls, then get lost.
+•	There is no structured system that automatically converts performance data into a creative brief.
+The result:
+Creatives are made reactively. Budget is wasted testing things that data already ruled out. The feedback loop is slow, manual, and dependent on whoever is most prepared on the weekly call.
+
+3. The Solution
+Creative Performance Bridge automates the translation layer between media buyer and designer.
+
+Core Workflow
+Step 1	Media buyer (Hamza) exports his weekly performance data from Meta Ads Manager as a CSV or Excel file.
+Step 2	He uploads it to a shared Google Sheet or directly into the dashboard.
+Step 3	The tool reads the data and automatically generates a creative brief: what is working, what is fatiguing, what to make next, and what to retire.
+Step 4	The designer (Paolo) receives a clear, actionable brief — no spreadsheet interpretation required.
+Step 5	Daniel and Hailey can view the dashboard at any time to see the full picture without needing a briefing.
+
+The tool speaks creative language, not media buying language. Instead of showing CPMs and CTRs, it says: 'fear-of-missing-out hooks are outperforming aspiration hooks this week' or 'this talking-head format is 3x ahead of static — produce more.'
+
+4. Target Users
+User Profiles
+Primary — Designer	Receives the creative brief output. Needs clear, plain-language direction on what to make next without interpreting raw data.
+Primary — Media Buyer	Uploads weekly performance export. Needs a dead-simple upload process that does not change his existing workflow.
+Secondary — Founder / CEO	Views the dashboard for high-level visibility. Does not need to interact with the tool — read-only access is sufficient.
+Secondary — Other Coaches	Future paying customers. Coaches and consultants running ads with lean teams who cannot afford Motion.
+
+5. First Use Case — Be Known
+The first implementation is for Be Known (beknownonline.com), a coaching and consulting brand hosted by Daniel Pope.
+
+Be Known Team
+Daniel Pope	Founder and host. Needs dashboard visibility without manual reporting.
+Hailey	Operations Manager. Needs high-level creative performance view for operational oversight.
+Hamza	Media buyer. Uploads weekly Meta Ads Manager export after the team call.
+Paolo	Designer and creative. Receives the auto-generated brief and produces next week's creatives.
+
+The team already has a weekly call where Hamza shares performance. The tool removes the manual interpretation step and makes the output of that call immediately actionable for Paolo.
+
+6. Core Features — MVP
+6.1 Upload & Parse
+•	Accept CSV or Excel upload from Meta Ads Manager standard export format.
+•	Accept Google Sheet URL as an alternative data source.
+•	Parse columns: ad name, creative type, hook text, spend, impressions, CPM, CTR, CPC, ROAS, frequency.
+•	Flag unrecognized columns gracefully rather than erroring.
+6.2 Creative Brief Generator
+•	Top 3 performing creatives this week with plain-language explanation of why they worked.
+•	Bottom 3 performing creatives with diagnosis: was it the hook, the format, or the offer?
+•	Fatigue alerts: any creative with rising frequency and declining CTR flagged for replacement.
+•	One recommended creative direction for next week based on winning patterns.
+•	One recommended creative to retire immediately.
+6.3 Dashboard
+•	Clean, readable interface accessible via URL — no local installation required.
+•	Role-appropriate views: full view for Hamza and Paolo, summary view for Daniel and Hailey.
+•	Visual indicators: green for winning, yellow for watch, red for fatigue or underperformance.
+•	Week-over-week comparison once two or more uploads exist.
+6.4 Brief Export
+•	One-click export of the creative brief as a PDF or shareable link.
+•	Brief format: plain language, no jargon, structured as: What to make, What to retire, What is winning, What to watch.
+
+7. Out of Scope — MVP
+•	Direct Meta Ads API integration (manual upload is sufficient for v1).
+•	TikTok, YouTube, or Google Ads support (Meta only for v1).
+•	Creative asset storage or swipe file functionality.
+•	Automated email or Slack notifications.
+•	Multi-client or agency workspace support.
+•	Billing, authentication, or subscription management.
+These are valid future features but should not be built until the core brief generation loop is validated with Be Known.
+
+8. Data & Hosting
+Technical Decisions
+Data source	Meta Ads Manager CSV export — standard columns, no API key required from the user.
+Hosting	Google Sheets as the backend data layer for v1. Hamza drops the export into a shared Google Sheet. The dashboard reads from it live.
+Access	Hosted as a web app so all team members can access from any device via URL. No installation required.
+Stack preference	Lightweight — Node.js or Python backend, simple frontend. Refer to previous Outreach IQ build for established patterns.
+AI layer	Claude API (claude-sonnet-4-20250514) for brief generation. Pass parsed ad data in the prompt and return plain-language creative recommendations.
+Cost	Claude API usage is minimal — one call per weekly upload. Google Sheets backend is free. Hosting on Railway or Render at approximately $5–10/month.
+
+9. AI Brief Generation — Prompt Specification
+The following describes the expected behavior of the AI brief generator. Claude Code should implement this as a structured prompt passed to the Claude API on each upload.
+
+Input
+Parsed ad performance data including: ad name, hook text (extracted from ad name or description), creative format (video/static/carousel), spend, impressions, CTR, frequency, and ROAS.
+Output — Required Fields
+•	TOP PERFORMERS: List top 3 ads with plain-language reason for success. Focus on hook type, format, and offer angle.
+•	UNDERPERFORMERS: List bottom 3 ads with diagnosis. Distinguish between hook failure, format mismatch, and audience fatigue.
+•	FATIGUE ALERTS: Flag any creative where frequency exceeds 3.0 and CTR has declined week-over-week.
+•	MAKE NEXT: One specific creative direction for next week. Must include hook angle, recommended format, and reason based on data.
+•	RETIRE NOW: One creative to pause immediately with reason.
+Tone Guidelines
+•	Write for a designer, not a media buyer. No jargon.
+•	Be specific — name the ad, name the hook, name the format.
+•	Keep the full brief under 400 words.
+•	Use plain English. No bullet soup. Short paragraphs.
+
+10. Monetization Plan
+Creative Performance Bridge is built first for Be Known as an internal tool. Once validated, it becomes a product sold to other coaches and consultants.
+
+Pricing Model
+Internal v1	Free — built for Be Known. Validates the concept with a real team and real data.
+SaaS launch	$29–$49/month per team. Targets coaches and consultants spending $1K–$25K/month on ads.
+Positioning	Motion for coaches. Fraction of the price, built for this audience specifically.
+Market gap	Motion starts at $250/month and requires $25K+ monthly ad spend. Our entire target market is below that threshold.
+White-label	Future option: agencies managing multiple coaching clients pay a higher rate and resell under their brand.
+
+11. Competitive Context
+Market Landscape
+Motion	$250/month. Built for DTC e-commerce. Requires $25K+ monthly ad spend. Direct inspiration for this product.
+MagicBrief	$249/month. Creative workflow and analytics. More focused on swipe files and inspiration than brief generation.
+Foreplay	$49/month. Primarily an ad swipe file tool. No performance data translation or brief generation.
+Meta Ads Manager	Free. Raw data only. No creative interpretation or brief output.
+Our position	The only tool that translates Meta performance data into plain-language creative briefs, priced for coaches and consultants with smaller budgets.
+
+12. Build Priority — Recommended Order
+1.	CSV upload and parser — accept Meta Ads Manager standard export and parse into structured data.
+2.	AI brief generator — pass parsed data to Claude API, return plain-language brief in the five required fields.
+3.	Dashboard display — show the brief output in a clean, readable web interface with color-coded status indicators.
+4.	Google Sheets integration — allow Hamza to upload to a shared sheet as an alternative to direct file upload.
+5.	Role-based views — full view for Hamza and Paolo, summary view for Daniel and Hailey.
+6.	Brief export — one-click PDF or shareable link of the current week's creative brief.
+7.	Week-over-week comparison — once two or more uploads exist, show trend direction per creative.
+
+13. Related Projects — Context for Claude Code
+The following projects have been previously built and establish patterns and conventions Claude Code should be aware of:
+
+Prior Builds
+Outreach IQ	Lead research dashboard. Local Node.js app with a branded dark-mode UI. Established dashboard patterns, .bat launchers, CSV export, and email verification pipeline. Reference for stack conventions and UI style.
+Meta Ad Library Tool	Built in a prior session. Searches the Meta Ad Library API by keyword and niche. Reference for Meta API familiarity and ad data structure.
+Be Known Brand System	Dark mode: #080808 background, #00FF7A accent green, Aeonika and Nunito Sans fonts. Used across all Be Known HTML deliverables. This tool uses a lighter theme since it is a multi-user dashboard, not a brand asset.
+
+14. Open Questions for Claude Code
+•	Should the Google Sheets integration use the Sheets API with OAuth, or a simpler published CSV URL approach for v1?
+•	What is the preferred hosting platform — Railway, Render, or Vercel? Reference Outreach IQ conventions if applicable.
+•	Should the AI brief be generated on upload or on-demand via a button click?
+•	Does week-over-week comparison require persistent storage, or can it be handled by keeping previous uploads in the sheet?
+•	Should the dashboard require a login for v1, or is a private URL sufficient given the small team size?
+
+This document was produced from a product ideation session. All decisions are provisional and open to revision during the build.
+Creative Performance Bridge — Handoff v1.0 — Confidential

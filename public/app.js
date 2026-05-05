@@ -1,0 +1,304 @@
+const isViewOnly = new URLSearchParams(location.search).get('role') === 'summary';
+let currentWeekKey = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (isViewOnly) document.getElementById('sidebar').classList.add('hidden');
+
+  setupTabs();
+  setupSegment();
+  setupFileUpload();
+  setupSheetsLoad();
+  setupGenerateBtn();
+  setupComments();
+  loadCurrentWeek();
+});
+
+// ── TOP TABS ───────────────────────────────────────────────────────────────
+function setupTabs() {
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
+
+      // Hide sidebar on how-to tab
+      const sidebar = document.getElementById('sidebar');
+      if (btn.dataset.panel === 'howto') {
+        sidebar.classList.add('hidden');
+      } else {
+        if (!isViewOnly) sidebar.classList.remove('hidden');
+      }
+
+      if (btn.dataset.panel === 'history') loadHistory();
+    });
+  });
+}
+
+// ── SIDEBAR SEGMENT CONTROL ────────────────────────────────────────────────
+function setupSegment() {
+  document.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('tab-file').classList.toggle('hidden', tab !== 'file');
+      document.getElementById('tab-sheets').classList.toggle('hidden', tab !== 'sheets');
+    });
+  });
+}
+
+// ── FILE UPLOAD ────────────────────────────────────────────────────────────
+function setupFileUpload() {
+  const drop = document.getElementById('fileDrop');
+  const input = document.getElementById('fileInput');
+
+  input.addEventListener('change', () => { if (input.files[0]) uploadFile(input.files[0]); });
+
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+  });
+}
+
+async function uploadFile(file) {
+  setStatus('Uploading…');
+  setDot('working', 'Uploading…');
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: form });
+    const data = await res.json();
+    if (!res.ok) { setStatus(data.error, true); setDot('error', 'Upload failed'); return; }
+    currentWeekKey = data.weekKey;
+    setStatus(`${data.count} ads loaded`);
+    setDot('ok', `${data.count} ads ready`);
+    document.getElementById('generateBtn').disabled = false;
+    document.querySelector('.drop-main').textContent = file.name;
+  } catch {
+    setStatus('Upload failed. Please try again.', true);
+    setDot('error', 'Upload failed');
+  }
+}
+
+// ── SHEETS LOAD ────────────────────────────────────────────────────────────
+function setupSheetsLoad() {
+  document.getElementById('loadSheetsBtn').addEventListener('click', async () => {
+    const url = document.getElementById('sheetsUrl').value.trim();
+    if (!url) return setStatus('Please enter a URL.', true);
+    setStatus('Fetching sheet…');
+    setDot('working', 'Fetching sheet…');
+    try {
+      const res = await fetch('/sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setStatus(data.error, true); setDot('error', 'Load failed'); return; }
+      currentWeekKey = data.weekKey;
+      setStatus(`${data.count} ads loaded`);
+      setDot('ok', `${data.count} ads ready`);
+      document.getElementById('generateBtn').disabled = false;
+    } catch {
+      setStatus('Could not load sheet.', true);
+      setDot('error', 'Load failed');
+    }
+  });
+}
+
+// ── GENERATE BRIEF ─────────────────────────────────────────────────────────
+function setupGenerateBtn() {
+  document.getElementById('generateBtn').addEventListener('click', async () => {
+    hide('emptyState');
+    hide('briefOutput');
+    show('loading');
+    setDot('working', 'Generating brief…');
+    try {
+      const res = await fetch('/generate-brief', { method: 'POST' });
+      const data = await res.json();
+      hide('loading');
+      if (!res.ok) { setStatus(data.error, true); setDot('error', 'Failed'); show('emptyState'); return; }
+      currentWeekKey = data.weekKey;
+      setDot('ok', 'Brief ready');
+      renderBrief(data.brief, data.weekKey);
+    } catch {
+      hide('loading');
+      setStatus('Brief generation failed.', true);
+      setDot('error', 'Failed');
+      show('emptyState');
+    }
+  });
+}
+
+// ── LOAD CURRENT WEEK ON STARTUP ───────────────────────────────────────────
+async function loadCurrentWeek() {
+  try {
+    const res = await fetch('/week/current');
+    const data = await res.json();
+    if (!data.week) return;
+    currentWeekKey = data.weekKey;
+    if (data.week.ads?.length) {
+      setStatus(`${data.week.ads.length} ads loaded`);
+      setDot('ok', `${data.week.ads.length} ads ready`);
+      document.getElementById('generateBtn').disabled = false;
+    }
+    if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments);
+  } catch { /* silent */ }
+}
+
+// ── RENDER BRIEF ───────────────────────────────────────────────────────────
+function renderBrief(brief, weekKey, existingComments) {
+  currentWeekKey = weekKey;
+  document.getElementById('briefTitle').textContent = `Creative Brief — ${weekKey}`;
+  document.getElementById('briefMeta').textContent = 'Generated from your Meta Ads export';
+  document.getElementById('briefSummary').textContent = brief.summary || '';
+
+  renderAdList('topPerformers', brief.topPerformers, 'green', a => `
+    <div class="ad-name">${esc(a.adName)}</div>
+    <div class="ad-why">${esc(a.why)}</div>
+    <span class="ad-action">${esc(a.action)}</span>
+  `);
+  renderAdList('makeNext', brief.makeNext, 'blue', a => `
+    <div class="ad-name">${esc(a.concept)}</div>
+    <div class="ad-why">${esc(a.rationale)}</div>
+  `);
+  renderAdList('fatigueAlerts', brief.fatigueAlerts, 'orange', a => `
+    <div class="ad-name">${esc(a.adName)}</div>
+    <div class="ad-why">${esc(a.why)}</div>
+    <span class="ad-action">${esc(a.action)}</span>
+  `);
+  renderAdList('underperformers', brief.underperformers, 'orange', a => `
+    <div class="ad-name">${esc(a.adName)}</div>
+    <div class="ad-why">${esc(a.why)}</div>
+    <span class="ad-action">${esc(a.action)}</span>
+  `);
+  renderAdList('retireNow', brief.retireNow, 'red', a => `
+    <div class="ad-name">${esc(a.adName)}</div>
+    <div class="ad-why">${esc(a.reason)}</div>
+  `);
+
+  renderComments(existingComments || []);
+  hide('emptyState');
+  hide('loading');
+  show('briefOutput');
+}
+
+function renderAdList(id, items, color, tpl) {
+  const el = document.getElementById(id);
+  if (!items?.length) { el.innerHTML = '<p class="empty-note">None this week.</p>'; return; }
+  el.innerHTML = items.map(i => `<div class="ad-item ${color}">${tpl(i)}</div>`).join('');
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────────
+async function loadHistory() {
+  const grid = document.getElementById('historyGrid');
+  const empty = document.getElementById('historyEmpty');
+  grid.innerHTML = '';
+  try {
+    const res = await fetch('/history');
+    const data = await res.json();
+    if (!data.weeks.length) { show('historyEmpty'); return; }
+    hide('historyEmpty');
+    grid.innerHTML = data.weeks.map(w => `
+      <div class="history-card" data-week="${w}">
+        <div>
+          <div class="history-week">${w}</div>
+          <div class="history-meta">Click to view brief</div>
+        </div>
+        <div class="history-arrow">→</div>
+      </div>
+    `).join('');
+    grid.querySelectorAll('.history-card').forEach(card => {
+      card.addEventListener('click', () => loadWeek(card.dataset.week));
+    });
+  } catch { empty.classList.remove('hidden'); }
+}
+
+async function loadWeek(weekKey) {
+  // Switch to brief tab
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel-view').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-panel="brief"]').classList.add('active');
+  document.getElementById('panel-brief').classList.add('active');
+  if (!isViewOnly) document.getElementById('sidebar').classList.remove('hidden');
+
+  hide('emptyState');
+  show('loading');
+  try {
+    const res = await fetch(`/week/${weekKey}`);
+    const data = await res.json();
+    hide('loading');
+    if (!res.ok || !data.week?.brief) { show('emptyState'); return; }
+    renderBrief(data.week.brief, weekKey, data.week.comments);
+  } catch { hide('loading'); show('emptyState'); }
+}
+
+// ── COMMENTS ───────────────────────────────────────────────────────────────
+function setupComments() {
+  document.getElementById('submitComment').addEventListener('click', async () => {
+    const author = document.getElementById('commentAuthor').value.trim();
+    const text = document.getElementById('commentText').value.trim();
+    if (!author || !text) return alert('Please enter your name and a comment.');
+    if (!currentWeekKey) return alert('No brief loaded yet.');
+    try {
+      const res = await fetch('/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekKey: currentWeekKey, author, text }),
+      });
+      const data = await res.json();
+      if (!res.ok) return alert(data.error);
+      document.getElementById('commentText').value = '';
+      renderComments(data.comments);
+    } catch { alert('Could not post comment.'); }
+  });
+}
+
+function renderComments(comments) {
+  const el = document.getElementById('commentsList');
+  if (!comments?.length) { el.innerHTML = '<p class="empty-note" style="margin-bottom:12px">No comments yet.</p>'; return; }
+  el.innerHTML = comments.map(c => `
+    <div class="comment-item">
+      <div class="comment-meta">
+        <span class="comment-author">${esc(c.author)}</span>
+        <span class="comment-time">${formatTime(c.createdAt)}</span>
+      </div>
+      <div class="comment-text">${esc(c.text)}</div>
+    </div>
+  `).join('');
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function setStatus(msg, isError) {
+  const el = document.getElementById('uploadStatus');
+  el.textContent = msg;
+  el.className = 'upload-status' + (isError ? ' error' : '');
+}
+
+function setDot(state, text) {
+  const dot = document.querySelector('.status-badge .dot');
+  const label = document.getElementById('statusText');
+  dot.className = `dot ${state}`;
+  label.textContent = text;
+}
+
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' · ' +
+    d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
