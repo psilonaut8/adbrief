@@ -529,6 +529,62 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 /* ── UTILS ────────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 
+/* ── MOBILE ───────────────────────────────────────────────────────────────── */
+@media (max-width: 700px) {
+  .topbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 10px 16px 0;
+    gap: 0;
+  }
+
+  .brand {
+    margin-right: auto;
+    padding-bottom: 10px;
+  }
+
+  .topbar-right { display: none; }
+
+  .tabnav {
+    order: 3;
+    width: 100%;
+    border-top: 1px solid var(--sep);
+    gap: 0;
+    height: 44px;
+  }
+
+  .tab {
+    flex: 1;
+    height: 44px;
+    padding: 0;
+    font-size: 13px;
+    justify-content: center;
+    border-bottom: none;
+    border-top: 2px solid transparent;
+  }
+  .tab.active {
+    border-top-color: var(--accent);
+    border-bottom-color: transparent;
+  }
+
+  html, body { overflow: auto; }
+
+  .layout { flex-direction: column; overflow: visible; }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--sep);
+    padding: 16px;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .content { padding: 16px; overflow: visible; }
+
+  .howto-grid { grid-template-columns: 1fr; }
+}
+
 /* ── PRINT ────────────────────────────────────────────────────────────────── */
 @media print {
   .no-print, .sidebar, .topbar .tabnav, .topbar-right { display: none !important; }
