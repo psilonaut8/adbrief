@@ -633,7 +633,8 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   transition: background .1s;
 }
 .data-table tbody tr:last-child { border-bottom: none; }
-.data-table tbody tr:hover { background: var(--surface2); }
+.data-table tbody tr:nth-child(even) { background: #f7f7fb; }
+.data-table tbody tr:hover { background: var(--blue-lt); }
 
 .data-table tbody td {
   padding: 11px 14px;
@@ -648,6 +649,23 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   min-width: 200px;
   max-width: 320px;
 }
+
+/* ── FORMAT BADGES ────────────────────────────────────────────────────────── */
+.fmt-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fmt-video      { background: #eef2ff; color: #4338ca; }
+.fmt-carousel   { background: #fef3c7; color: #92400e; }
+.fmt-vertical   { background: #f0fdf4; color: #166534; }
+.fmt-horizontal { background: #eff6ff; color: #1e40af; }
+.fmt-square     { background: #f5f3ff; color: #6d28d9; }
+.fmt-image      { background: #f0f9ff; color: #0369a1; }
+.fmt-other      { background: var(--surface3); color: var(--label3); }
 
 /* ── UTILS ────────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

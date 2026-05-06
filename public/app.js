@@ -332,6 +332,25 @@ async function loadDataTab() {
   } catch { /* silent */ }
 }
 
+function formatBadge(raw) {
+  const f = (raw || '').toLowerCase();
+  if (f.includes('video'))    return '<span class="fmt-badge fmt-video">▶ Video</span>';
+  if (f.includes('carousel')) return '<span class="fmt-badge fmt-carousel">≡ Carousel</span>';
+  if (f.includes('reel'))     return '<span class="fmt-badge fmt-video">▶ Reel</span>';
+  if (f.includes('story') || f.includes('stories') || f.includes('vertical'))
+                               return '<span class="fmt-badge fmt-vertical">▌Vertical</span>';
+  if (f.includes('horizontal') || f.includes('landscape'))
+                               return '<span class="fmt-badge fmt-horizontal">▬ Horizontal</span>';
+  if (f.includes('square'))   return '<span class="fmt-badge fmt-square">⬛ Square</span>';
+  if (f.includes('image') || f.includes('photo') || f.includes('static'))
+                               return '<span class="fmt-badge fmt-image">◼ Image</span>';
+  return raw ? `<span class="fmt-badge fmt-other">${esc(raw)}</span>` : '—';
+}
+
+function naturalCmp(a, b) {
+  return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
+}
+
 function renderDataTable() {
   const rows = [...dataAds];
   if (dataSortCol) {
@@ -340,17 +359,15 @@ function renderDataTable() {
       const bv = b[dataSortCol] ?? '';
       const an = parseFloat(av), bn = parseFloat(bv);
       const isNum = !isNaN(an) && !isNaN(bn);
-      let cmp = isNum ? an - bn : String(av).localeCompare(String(bv));
+      let cmp = isNum ? an - bn : naturalCmp(av, bv);
       return dataSortAsc ? cmp : -cmp;
     });
   }
 
-  const numCols = new Set(['spend','roas','ctr','cpc','cpm','impressions','clicks']);
-
   document.getElementById('dataTableBody').innerHTML = rows.map(ad => `
     <tr>
       <td class="ad-name-cell">${esc(ad.adName || '—')}</td>
-      <td>${esc(ad.format || '—')}</td>
+      <td>${formatBadge(ad.format)}</td>
       <td class="num">${fmtNum(ad.spend, '$')}</td>
       <td class="num">${fmtNum(ad.roas)}</td>
       <td class="num">${fmtPct(ad.ctr)}</td>
