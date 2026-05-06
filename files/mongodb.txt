@@ -1,0 +1,5 @@
+npm install mongodb
+
+mongodb+srv://paolovsanson_db_user:oakenfold1981@adbrief.9y0tzp1.mongodb.net/?appName=AdBrief
+
+paolovsanson_db_user

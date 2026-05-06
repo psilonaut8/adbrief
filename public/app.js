@@ -189,8 +189,14 @@ function renderBrief(brief, weekKey, existingComments) {
 
 function renderAdList(id, items, color, tpl) {
   const el = document.getElementById(id);
-  if (!items?.length) { el.innerHTML = '<p class="empty-note">None this week.</p>'; return; }
+  const countEl = document.getElementById('count-' + id);
+  if (!items?.length) {
+    el.innerHTML = '<p class="empty-note">None this week.</p>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
   el.innerHTML = items.map(i => `<div class="ad-item ${color}">${tpl(i)}</div>`).join('');
+  if (countEl) countEl.textContent = items.length;
 }
 
 // ── HISTORY ────────────────────────────────────────────────────────────────

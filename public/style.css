@@ -220,7 +220,7 @@ body {
   background: var(--blue-lt);
 }
 .file-drop .drop-icon { font-size: 22px; margin-bottom: 4px; }
-.file-drop .drop-main { font-size: 13px; font-weight: 600; color: var(--label2); }
+.file-drop .drop-main { font-size: 13px; font-weight: 600; color: var(--label2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 .file-drop .drop-sub  { font-size: 11px; color: var(--label4); }
 .file-drop.dragover .drop-main { color: var(--accent); }
 
@@ -326,7 +326,11 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 }
 
 /* ── BRIEF GRID ───────────────────────────────────────────────────────────── */
-.brief-grid { display: flex; flex-direction: column; gap: 10px; }
+.brief-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 
 .bcard {
   background: var(--surface);
@@ -337,17 +341,30 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 }
 
 .bcard-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--label2);
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   margin-bottom: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--sep2);
+}
+
+.bcard-count {
+  margin-left: auto;
+  background: var(--surface3);
+  border: 1px solid var(--sep);
+  color: var(--label3);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .ico {
@@ -366,7 +383,9 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .ico-orange { background: var(--orange-lt); color: #a05c00; }
 
 /* ── SUMMARY CARD ─────────────────────────────────────────────────────────── */
-.summary-card { border-left: 3px solid var(--accent); }
+.summary-card { grid-column: 1 / -1; border-left: 3px solid var(--accent); }
+.retire-card  { grid-column: 1 / -1; }
+.bcard.no-print { grid-column: 1 / -1; }
 .summary-text { font-size: 15px; line-height: 1.75; color: var(--label2); }
 
 /* ── AD LIST ITEMS ────────────────────────────────────────────────────────── */
@@ -581,6 +600,9 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   }
 
   .content { padding: 16px; overflow: visible; }
+
+  .brief-grid { grid-template-columns: 1fr; }
+  .summary-card, .retire-card, .bcard.no-print { grid-column: 1; }
 
   .howto-grid { grid-template-columns: 1fr; }
 }
