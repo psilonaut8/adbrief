@@ -587,6 +587,68 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   background: #fffdf5;
 }
 
+/* ── DATA TABLE ───────────────────────────────────────────────────────────── */
+.data-card {
+  background: var(--surface);
+  border: 1px solid var(--sep2);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+#dataTableWrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--sep);
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--label3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.data-table thead th.num { text-align: right; }
+
+.data-table thead th.sortable { cursor: pointer; }
+.data-table thead th.sortable:hover { color: var(--label); background: var(--surface3); }
+
+.data-table thead th.sort-asc::after  { content: ' ↑'; color: var(--accent); }
+.data-table thead th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--sep2);
+  transition: background .1s;
+}
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--surface2); }
+
+.data-table tbody td {
+  padding: 11px 14px;
+  color: var(--label2);
+  white-space: nowrap;
+}
+.data-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tbody td.ad-name-cell {
+  color: var(--label);
+  font-weight: 500;
+  white-space: normal;
+  min-width: 200px;
+  max-width: 320px;
+}
+
 /* ── UTILS ────────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }
 

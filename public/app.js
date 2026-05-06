@@ -36,15 +36,16 @@ function setupTabs() {
       btn.classList.add('active');
       document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
 
-      // Hide sidebar on how-to tab
+      // Hide sidebar on how-to and data tabs
       const sidebar = document.getElementById('sidebar');
-      if (btn.dataset.panel === 'howto') {
+      if (btn.dataset.panel === 'howto' || btn.dataset.panel === 'data') {
         sidebar.classList.add('hidden');
       } else {
         if (!isViewOnly) sidebar.classList.remove('hidden');
       }
 
       if (btn.dataset.panel === 'history') loadHistory();
+      if (btn.dataset.panel === 'data') loadDataTab();
     });
   });
 }
@@ -305,6 +306,97 @@ function renderComments(comments) {
       <div class="comment-text">${esc(c.text)}</div>
     </div>
   `).join('');
+}
+
+// ── DATA TAB ───────────────────────────────────────────────────────────────
+let dataAds = [];
+let dataSortCol = null;
+let dataSortAsc = true;
+
+async function loadDataTab() {
+  try {
+    const res = await fetch('/week/current');
+    const data = await res.json();
+    if (!data.week?.ads?.length) {
+      show('dataEmpty');
+      document.getElementById('dataTableWrap').classList.add('hidden');
+      document.getElementById('dataWeekLabel').textContent = '';
+      return;
+    }
+    dataAds = data.week.ads;
+    document.getElementById('dataWeekLabel').textContent = data.weekKey + ' · ' + dataAds.length + ' ads';
+    hide('dataEmpty');
+    renderDataTable();
+    document.getElementById('dataTableWrap').classList.remove('hidden');
+    setupDataSort();
+  } catch { /* silent */ }
+}
+
+function renderDataTable() {
+  const rows = [...dataAds];
+  if (dataSortCol) {
+    rows.sort((a, b) => {
+      const av = a[dataSortCol] ?? '';
+      const bv = b[dataSortCol] ?? '';
+      const an = parseFloat(av), bn = parseFloat(bv);
+      const isNum = !isNaN(an) && !isNaN(bn);
+      let cmp = isNum ? an - bn : String(av).localeCompare(String(bv));
+      return dataSortAsc ? cmp : -cmp;
+    });
+  }
+
+  const numCols = new Set(['spend','roas','ctr','cpc','cpm','impressions','clicks']);
+
+  document.getElementById('dataTableBody').innerHTML = rows.map(ad => `
+    <tr>
+      <td class="ad-name-cell">${esc(ad.adName || '—')}</td>
+      <td>${esc(ad.format || '—')}</td>
+      <td class="num">${fmtNum(ad.spend, '$')}</td>
+      <td class="num">${fmtNum(ad.roas)}</td>
+      <td class="num">${fmtPct(ad.ctr)}</td>
+      <td class="num">${fmtNum(ad.cpc, '$')}</td>
+      <td class="num">${fmtNum(ad.cpm, '$')}</td>
+      <td class="num">${fmtInt(ad.impressions)}</td>
+      <td class="num">${fmtInt(ad.clicks)}</td>
+    </tr>
+  `).join('');
+
+  document.querySelectorAll('.data-table thead th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (th.dataset.col === dataSortCol) {
+      th.classList.add(dataSortAsc ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function setupDataSort() {
+  document.querySelectorAll('.data-table thead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      if (dataSortCol === th.dataset.col) {
+        dataSortAsc = !dataSortAsc;
+      } else {
+        dataSortCol = th.dataset.col;
+        dataSortAsc = true;
+      }
+      renderDataTable();
+    });
+  });
+}
+
+function fmtNum(val, prefix) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '—';
+  return (prefix || '') + n.toFixed(2);
+}
+function fmtPct(val) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '—';
+  return n.toFixed(2) + '%';
+}
+function fmtInt(val) {
+  const n = parseInt(val, 10);
+  if (isNaN(n)) return '—';
+  return n.toLocaleString();
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────

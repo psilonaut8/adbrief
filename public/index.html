@@ -22,6 +22,7 @@
       <button class="tab active" data-panel="brief">Brief</button>
       <button class="tab" data-panel="history">History</button>
       <button class="tab" data-panel="howto">How to Use</button>
+      <button class="tab" data-panel="data">Data</button>
     </nav>
     <div class="topbar-right">
       <div class="status-badge" id="statusBadge">
@@ -152,6 +153,39 @@
           <div class="empty-icon">🗂️</div>
           <div class="empty-title">No history yet</div>
           <div class="empty-sub">Generated briefs will appear here week by week.</div>
+        </div>
+      </div>
+
+      <!-- DATA PANEL -->
+      <div class="panel-view" id="panel-data">
+        <div class="content-header">
+          <h1>Ad Data</h1>
+          <div id="dataWeekLabel" class="content-meta"></div>
+        </div>
+        <div class="data-card" id="dataCard">
+          <div class="empty-state" id="dataEmpty">
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No data for this week</div>
+            <div class="empty-sub">Upload a Meta export on the Brief tab first.</div>
+          </div>
+          <div id="dataTableWrap" class="hidden">
+            <table class="data-table" id="dataTable">
+              <thead>
+                <tr>
+                  <th data-col="adName"    class="sortable">Ad Name</th>
+                  <th data-col="format"    class="sortable">Format</th>
+                  <th data-col="spend"     class="sortable num">Spend</th>
+                  <th data-col="roas"      class="sortable num">ROAS</th>
+                  <th data-col="ctr"       class="sortable num">CTR</th>
+                  <th data-col="cpc"       class="sortable num">CPC</th>
+                  <th data-col="cpm"       class="sortable num">CPM</th>
+                  <th data-col="impressions" class="sortable num">Impressions</th>
+                  <th data-col="clicks"    class="sortable num">Clicks</th>
+                </tr>
+              </thead>
+              <tbody id="dataTableBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
