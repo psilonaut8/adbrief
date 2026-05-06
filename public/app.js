@@ -1,6 +1,20 @@
 const isViewOnly = new URLSearchParams(location.search).get('role') === 'summary';
 let currentWeekKey = null;
 
+// Show wake-up banner once per day
+(function() {
+  const banner = document.getElementById('wakeupBanner');
+  const today = new Date().toDateString();
+  if (localStorage.getItem('wakeupDismissed') === today) {
+    banner.style.display = 'none';
+  } else {
+    banner.querySelector('.wakeup-close').onclick = () => {
+      banner.style.display = 'none';
+      localStorage.setItem('wakeupDismissed', today);
+    };
+  }
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   if (isViewOnly) document.getElementById('sidebar').classList.add('hidden');
 

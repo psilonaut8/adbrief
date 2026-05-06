@@ -47,6 +47,31 @@ body {
   flex-direction: column;
 }
 
+/* ── WAKE-UP BANNER ───────────────────────────────────────────────────────── */
+.wakeup-banner {
+  background: #fffbeb;
+  border-bottom: 1px solid rgba(255,149,0,.25);
+  padding: 9px 20px;
+  font-size: 13px;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.wakeup-close {
+  background: none;
+  border: none;
+  font-size: 14px;
+  color: #92400e;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.6;
+  padding: 0 4px;
+}
+.wakeup-close:hover { opacity: 1; }
+
 /* ── TOPBAR ───────────────────────────────────────────────────────────────── */
 .topbar {
   height: 52px;

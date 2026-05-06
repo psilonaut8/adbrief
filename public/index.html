@@ -9,6 +9,12 @@
 </head>
 <body>
 
+  <!-- WAKE-UP BANNER -->
+  <div class="wakeup-banner" id="wakeupBanner">
+    <span>⏱ First visit of the day? The server may take up to 30 seconds to wake up — just wait and the page will load.</span>
+    <button class="wakeup-close" onclick="document.getElementById('wakeupBanner').style.display='none';localStorage.setItem('wakeupDismissed','1')">✕</button>
+  </div>
+
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="brand">Ad<em>Brief</em></div>
@@ -201,7 +207,19 @@
           <div class="howto-card howto-tip">
             <div class="howto-step tip">💡</div>
             <h3>View-only link for the team</h3>
-            <p>Share <strong>yoursite.com?role=summary</strong> with the team. This hides the upload controls so they can only read and comment — not accidentally change anything.</p>
+            <p>Share <strong>https://adbrief.onrender.com?role=summary</strong> with the team. This hides the upload controls so they can only read and comment — not accidentally change anything.</p>
+          </div>
+
+          <div class="howto-card howto-tip">
+            <div class="howto-step tip">💡</div>
+            <h3>Deleting old briefs</h3>
+            <p>Go to the <strong>History</strong> tab and hover over any brief. A red <strong>Delete</strong> button will appear — click it to permanently remove that week's brief. You'll be asked to confirm before anything is deleted.</p>
+          </div>
+
+          <div class="howto-card howto-tip">
+            <div class="howto-step tip">⏱</div>
+            <h3>Slow to load?</h3>
+            <p>The app runs on a free server that goes to sleep after 15 minutes of no activity. The first visit of the day may take up to 30 seconds to load — just wait and it will come back. Once it's awake it's fast.</p>
           </div>
 
         </div>
