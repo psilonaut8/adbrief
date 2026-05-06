@@ -495,6 +495,57 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .comment-form { display: flex; flex-direction: column; gap: 8px; }
 .comment-form .btn-outline { align-self: flex-start; }
 
+.comment-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.comment-item:hover .comment-actions { opacity: 1; }
+
+.comment-action-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--sep);
+  background: var(--surface);
+  color: var(--label3);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.comment-action-btn:hover { color: var(--label); border-color: var(--label4); }
+.delete-comment-btn:hover { color: var(--red); border-color: rgba(255,59,48,.3); background: var(--red-lt); }
+
+.comment-edit-ta { margin-top: 8px; min-height: 64px; }
+.comment-edit-row { display: flex; gap: 8px; margin-top: 8px; }
+
+.comment-reactions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 100px;
+  border: 1.5px solid var(--sep);
+  background: var(--surface3);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+  color: var(--label3);
+}
+.reaction-btn:hover { border-color: var(--accent); background: var(--blue-lt); }
+.reaction-btn.reacted { border-color: var(--accent); background: var(--blue-lt); color: var(--accent); }
+.reaction-count { font-size: 11px; font-weight: 600; }
+
 /* ── HISTORY GRID ─────────────────────────────────────────────────────────── */
 .history-grid { display: flex; flex-direction: column; gap: 8px; }
 

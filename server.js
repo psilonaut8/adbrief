@@ -128,7 +128,7 @@ app.get('/history', async (req, res) => {
   }
 });
 
-// Add or update a comment on a week's brief
+// Add a comment
 app.post('/comment', async (req, res) => {
   try {
     const { weekKey, author, text } = req.body;
@@ -138,9 +138,60 @@ app.post('/comment', async (req, res) => {
     if (!week) return res.status(404).json({ error: 'Week not found' });
 
     const comments = week.comments || [];
-    comments.push({ author, text, createdAt: new Date().toISOString() });
+    comments.push({ author, text, createdAt: new Date().toISOString(), reactions: {} });
     await saveComments(weekKey, comments);
 
+    res.json({ ok: true, comments });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit a comment
+app.put('/comment', async (req, res) => {
+  try {
+    const { weekKey, index, text } = req.body;
+    if (!text?.trim()) return res.status(400).json({ error: 'Text is required' });
+    const week = await loadWeek(weekKey);
+    if (!week) return res.status(404).json({ error: 'Week not found' });
+    const comments = week.comments || [];
+    if (index < 0 || index >= comments.length) return res.status(400).json({ error: 'Invalid index' });
+    comments[index].text = text.trim();
+    comments[index].editedAt = new Date().toISOString();
+    await saveComments(weekKey, comments);
+    res.json({ ok: true, comments });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a comment
+app.delete('/comment', async (req, res) => {
+  try {
+    const { weekKey, index } = req.body;
+    const week = await loadWeek(weekKey);
+    if (!week) return res.status(404).json({ error: 'Week not found' });
+    const comments = week.comments || [];
+    if (index < 0 || index >= comments.length) return res.status(400).json({ error: 'Invalid index' });
+    comments.splice(index, 1);
+    await saveComments(weekKey, comments);
+    res.json({ ok: true, comments });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// React to a comment
+app.post('/reaction', async (req, res) => {
+  try {
+    const { weekKey, index, emoji, delta } = req.body;
+    const week = await loadWeek(weekKey);
+    if (!week) return res.status(404).json({ error: 'Week not found' });
+    const comments = week.comments || [];
+    if (index < 0 || index >= comments.length) return res.status(400).json({ error: 'Invalid index' });
+    if (!comments[index].reactions) comments[index].reactions = {};
+    comments[index].reactions[emoji] = Math.max(0, (comments[index].reactions[emoji] || 0) + delta);
+    await saveComments(weekKey, comments);
     res.json({ ok: true, comments });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -274,6 +274,10 @@ async function loadWeek(weekKey) {
 }
 
 // ── COMMENTS ───────────────────────────────────────────────────────────────
+let briefComments = [];
+let editingIdx = null;
+const REACTIONS = ['👍', '❤️', '🔥'];
+
 function setupComments() {
   document.getElementById('submitComment').addEventListener('click', async () => {
     const author = document.getElementById('commentAuthor').value.trim();
@@ -294,18 +298,118 @@ function setupComments() {
   });
 }
 
-function renderComments(comments) {
+function renderComments(comments, keepEditState) {
+  briefComments = comments || [];
+  if (!keepEditState) editingIdx = null;
+  _drawComments();
+}
+
+function _drawComments() {
   const el = document.getElementById('commentsList');
-  if (!comments?.length) { el.innerHTML = '<p class="empty-note" style="margin-bottom:12px">No comments yet.</p>'; return; }
-  el.innerHTML = comments.map(c => `
-    <div class="comment-item">
-      <div class="comment-meta">
-        <span class="comment-author">${esc(c.author)}</span>
-        <span class="comment-time">${formatTime(c.createdAt)}</span>
+  if (!briefComments.length) {
+    el.innerHTML = '<p class="empty-note" style="margin-bottom:12px">No comments yet.</p>';
+    return;
+  }
+
+  el.innerHTML = briefComments.map((c, i) => {
+    const reactions = c.reactions || {};
+    const isEditing = editingIdx === i;
+    const rKey = `r_${currentWeekKey}_${c.createdAt}`;
+    return `
+      <div class="comment-item">
+        <div class="comment-meta">
+          <span class="comment-author">${esc(c.author)}</span>
+          <span class="comment-time">${formatTime(c.createdAt)}${c.editedAt ? ' · edited' : ''}</span>
+          <div class="comment-actions">
+            <button class="comment-action-btn edit-comment-btn" data-i="${i}">Edit</button>
+            <button class="comment-action-btn delete-comment-btn" data-i="${i}">Delete</button>
+          </div>
+        </div>
+        ${isEditing ? `
+          <textarea class="input comment-edit-ta" id="edit-ta-${i}">${esc(c.text)}</textarea>
+          <div class="comment-edit-row">
+            <button class="btn-outline save-comment-btn" data-i="${i}">Save</button>
+            <button class="btn-outline cancel-edit-btn" style="color:var(--label3)">Cancel</button>
+          </div>
+        ` : `<div class="comment-text">${esc(c.text)}</div>`}
+        <div class="comment-reactions">
+          ${REACTIONS.map(emoji => {
+            const count = reactions[emoji] || 0;
+            const reacted = localStorage.getItem(`${rKey}_${emoji}`) === '1';
+            return `<button class="reaction-btn${reacted ? ' reacted' : ''}" data-i="${i}" data-emoji="${emoji}" data-rkey="${rKey}_${emoji}">${emoji}${count ? '<span class="reaction-count">' + count + '</span>' : ''}</button>`;
+          }).join('')}
+        </div>
       </div>
-      <div class="comment-text">${esc(c.text)}</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  el.querySelectorAll('.edit-comment-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editingIdx = parseInt(btn.dataset.i);
+      _drawComments();
+      document.getElementById(`edit-ta-${editingIdx}`)?.focus();
+    });
+  });
+
+  el.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => { editingIdx = null; _drawComments(); });
+  });
+
+  el.querySelectorAll('.save-comment-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const i = parseInt(btn.dataset.i);
+      const text = document.getElementById(`edit-ta-${i}`)?.value.trim();
+      if (!text) return;
+      try {
+        const res = await fetch('/comment', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weekKey: currentWeekKey, index: i, text }),
+        });
+        const data = await res.json();
+        if (!res.ok) return alert(data.error);
+        renderComments(data.comments);
+      } catch { alert('Could not save edit.'); }
+    });
+  });
+
+  el.querySelectorAll('.delete-comment-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const i = parseInt(btn.dataset.i);
+      if (!confirm('Delete this comment?')) return;
+      try {
+        const res = await fetch('/comment', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weekKey: currentWeekKey, index: i }),
+        });
+        const data = await res.json();
+        if (!res.ok) return alert(data.error);
+        renderComments(data.comments);
+      } catch { alert('Could not delete comment.'); }
+    });
+  });
+
+  el.querySelectorAll('.reaction-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const i = parseInt(btn.dataset.i);
+      const emoji = btn.dataset.emoji;
+      const rkey = btn.dataset.rkey;
+      const reacted = localStorage.getItem(rkey) === '1';
+      try {
+        const res = await fetch('/reaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weekKey: currentWeekKey, index: i, emoji, delta: reacted ? -1 : 1 }),
+        });
+        const data = await res.json();
+        if (!res.ok) return;
+        reacted ? localStorage.removeItem(rkey) : localStorage.setItem(rkey, '1');
+        briefComments = data.comments;
+        _drawComments();
+      } catch {}
+    });
+  });
 }
 
 // ── DATA TAB ───────────────────────────────────────────────────────────────
