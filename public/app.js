@@ -215,11 +215,26 @@ async function loadHistory() {
           <div class="history-week">${w}</div>
           <div class="history-meta">Click to view brief</div>
         </div>
-        <div class="history-arrow">→</div>
+        <div class="history-card-actions">
+          <button class="delete-btn" data-week="${w}" title="Delete brief">Delete</button>
+          <div class="history-arrow">→</div>
+        </div>
       </div>
     `).join('');
     grid.querySelectorAll('.history-card').forEach(card => {
       card.addEventListener('click', () => loadWeek(card.dataset.week));
+    });
+    grid.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Delete the brief for ${btn.dataset.week}? This cannot be undone.`)) return;
+        try {
+          await fetch(`/week/${btn.dataset.week}`, { method: 'DELETE' });
+          loadHistory();
+        } catch {
+          alert('Could not delete. Please try again.');
+        }
+      });
     });
   } catch { empty.classList.remove('hidden'); }
 }

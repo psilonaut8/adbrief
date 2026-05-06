@@ -488,7 +488,24 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .history-card:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
 .history-week { font-size: 15px; font-weight: 700; color: var(--label); }
 .history-meta { font-size: 12px; color: var(--label4); margin-top: 3px; }
+.history-card-actions { display: flex; align-items: center; gap: 10px; }
 .history-arrow { font-size: 16px; color: var(--label4); }
+
+.delete-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--red);
+  background: var(--red-lt);
+  border: 1px solid rgba(255,59,48,.2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-family: inherit;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.history-card:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { background: var(--red); color: #fff; }
 
 /* ── HOW TO USE ───────────────────────────────────────────────────────────── */
 .howto-grid {

@@ -6,7 +6,7 @@ const path = require('path');
 
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getPreviousWeekSummary, saveComments } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getPreviousWeekSummary, saveComments, deleteWeek } = require('./lib/storage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -104,6 +104,16 @@ app.get('/week/:key', async (req, res) => {
     const week = await loadWeek(req.params.key);
     if (!week) return res.status(404).json({ error: 'Week not found' });
     res.json({ weekKey: req.params.key, week });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a week's data
+app.delete('/week/:key', async (req, res) => {
+  try {
+    await deleteWeek(req.params.key);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
