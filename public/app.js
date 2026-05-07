@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupComments();
   setupDarkToggle();
   setupBriefViewToggle();
+  setupAdModal();
   loadCurrentWeek();
 });
 
@@ -566,8 +567,8 @@ function renderCardView() {
     const bv = parseFloat(b[cardSortCol]) || 0;
     return cardSortAsc ? av - bv : bv - av;
   });
-  document.getElementById('cardView').innerHTML = ads.map(ad => `
-    <div class="ad-data-card">
+  document.getElementById('cardView').innerHTML = ads.map((ad, i) => `
+    <div class="ad-data-card" data-adidx="${i}" style="cursor:pointer">
       ${ad.imageUrl ? `<div class="adc-thumb"><img src="${esc(ad.imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="adc-top">${formatBadge(ad.format)}</div>
       <div class="adc-name">${esc(ad.adName || '—')}</div>
@@ -591,6 +592,14 @@ function renderCardView() {
       </div>
     </div>
   `).join('');
+
+  // Wire up click to open modal
+  document.getElementById('cardView').querySelectorAll('.ad-data-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.adidx);
+      openAdModal(ads[idx]);
+    });
+  });
 }
 
 function roasColor(val) {
@@ -819,6 +828,52 @@ function renderTrendsTable() {
       <td class="num">${w.adCount}</td>
     </tr>
   `).join('');
+}
+
+// ── AD DETAIL MODAL ────────────────────────────────────────────────────────
+function openAdModal(ad) {
+  const overlay = document.getElementById('adModalOverlay');
+
+  // Image
+  const imgWrap = document.getElementById('adModalImage');
+  if (ad.imageUrl) {
+    imgWrap.innerHTML = `<img src="${esc(ad.imageUrl)}" alt="" onerror="this.parentElement.style.display='none'">`;
+    imgWrap.style.display = '';
+  } else {
+    imgWrap.innerHTML = '';
+    imgWrap.style.display = 'none';
+  }
+
+  // Format badge + name
+  document.getElementById('adModalTop').innerHTML = formatBadge(ad.format);
+  document.getElementById('adModalName').textContent = ad.adName || '—';
+
+  // All metrics
+  const metrics = [
+    { label: 'ROAS',        value: fmtNum(ad.roas),              cls: roasColor(ad.roas) },
+    { label: 'Spend',       value: fmtNum(ad.spend, '$'),         cls: '' },
+    { label: 'CTR',         value: fmtPct(ad.ctr),               cls: '' },
+    { label: 'CPC',         value: fmtNum(ad.cpc, '$'),           cls: '' },
+    { label: 'CPM',         value: fmtNum(ad.cpm, '$'),           cls: '' },
+    { label: 'Clicks',      value: fmtInt(ad.clicks),             cls: '' },
+    { label: 'Impressions', value: fmtInt(ad.impressions),        cls: '' },
+    { label: 'Reach',       value: fmtInt(ad.reach),              cls: '' },
+    { label: 'Frequency',   value: ad.frequency != null ? parseFloat(ad.frequency).toFixed(2) : '—', cls: '' },
+  ];
+  document.getElementById('adModalMetrics').innerHTML = metrics.map(m => `
+    <div class="ad-modal-metric">
+      <span class="adc-label">${m.label}</span>
+      <span class="adc-value ${m.cls}">${m.value}</span>
+    </div>`).join('');
+
+  overlay.classList.remove('hidden');
+}
+
+function setupAdModal() {
+  const overlay = document.getElementById('adModalOverlay');
+  document.getElementById('adModalClose').addEventListener('click', () => overlay.classList.add('hidden'));
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.add('hidden'); });
 }
 
 // ── DARK MODE ──────────────────────────────────────────────────────────────

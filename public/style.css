@@ -907,6 +907,87 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .val-orange { color: #a05c00; }
 .val-red    { color: var(--red); }
 
+/* ── AD DETAIL MODAL ─────────────────────────────────────────────────────── */
+.ad-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.ad-modal-overlay.hidden { display: none; }
+
+.ad-modal {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.ad-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.ad-modal-close:hover { background: rgba(0,0,0,0.6); }
+
+.ad-modal-image {
+  width: 100%;
+  max-height: 300px;
+  overflow: hidden;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface2);
+}
+.ad-modal-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  max-height: 300px;
+}
+.ad-modal-image:empty { display: none; }
+
+.ad-modal-body { padding: 18px; }
+.ad-modal-top { margin-bottom: 8px; }
+.ad-modal-name { font-size: 16px; font-weight: 700; color: var(--label); line-height: 1.4; margin-bottom: 16px; }
+
+.ad-modal-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.ad-modal-metric {
+  background: var(--surface2);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ad-modal-metric .adc-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--label4); }
+.ad-modal-metric .adc-value { font-size: 15px; font-weight: 700; color: var(--label); font-variant-numeric: tabular-nums; }
+
 /* ── CHART VIEW ───────────────────────────────────────────────────────────── */
 .chart-wrap { padding: 16px; position: relative; min-height: 320px; }
 .chart-wrap canvas { width: 100% !important; }
