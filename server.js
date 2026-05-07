@@ -11,6 +11,14 @@ const { getWeekKey, saveWeek, loadWeek, listWeeks, getPreviousWeekSummary, saveC
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+function getClient(req) {
+  const c = (req.body?.client || req.query?.client || '');
+  return c.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+}
+function clientKey(client, baseKey) {
+  return client ? `${client}__${baseKey}` : baseKey;
+}
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -21,7 +29,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const ads = parseBuffer(req.file.buffer, req.file.mimetype);
     if (!ads.length) return res.status(400).json({ error: 'No ad rows found. Check that your export has the correct columns.' });
 
-    const weekKey = getWeekKey();
+    const weekKey = clientKey(getClient(req), getWeekKey());
     const existing = await loadWeek(weekKey) || {};
     existing.ads = ads;
     existing.uploadedAt = new Date().toISOString();
@@ -47,7 +55,7 @@ app.post('/sheets', async (req, res) => {
     const ads = parseCSVText(text);
     if (!ads.length) return res.status(400).json({ error: 'No ad rows found in the sheet. Check column names.' });
 
-    const weekKey = getWeekKey();
+    const weekKey = clientKey(getClient(req), getWeekKey());
     const existing = await loadWeek(weekKey) || {};
     existing.ads = ads;
     existing.uploadedAt = new Date().toISOString();
@@ -63,7 +71,7 @@ app.post('/sheets', async (req, res) => {
 // Generate a brief from the current week's data
 app.post('/generate-brief', async (req, res) => {
   try {
-    const weekKey = getWeekKey();
+    const weekKey = clientKey(getClient(req), getWeekKey());
     const week = await loadWeek(weekKey);
     if (!week || !week.ads || !week.ads.length) {
       return res.status(400).json({ error: 'No data for this week. Upload a file or load from Sheets first.' });
@@ -90,7 +98,7 @@ app.post('/generate-brief', async (req, res) => {
 // Get current week's data and brief
 app.get('/week/current', async (req, res) => {
   try {
-    const weekKey = getWeekKey();
+    const weekKey = clientKey(getClient(req), getWeekKey());
     const week = await loadWeek(weekKey);
     res.json({ weekKey, week: week || null });
   } catch (err) {
@@ -122,7 +130,7 @@ app.delete('/week/:key', async (req, res) => {
 // List all saved weeks
 app.get('/history', async (req, res) => {
   try {
-    res.json({ weeks: await listWeeks() });
+    res.json({ weeks: await listWeeks(getClient(req)) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

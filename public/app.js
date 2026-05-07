@@ -1,5 +1,10 @@
 const isViewOnly = new URLSearchParams(location.search).get('role') === 'summary';
+const CLIENT = (new URLSearchParams(location.search).get('client') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
 let currentWeekKey = null;
+
+function displayKey(key) {
+  return key && key.includes('__') ? key.split('__').slice(1).join('__') : (key || '');
+}
 
 // Show wake-up banner once per day
 (function() {
@@ -17,6 +22,10 @@ let currentWeekKey = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   if (isViewOnly) document.getElementById('sidebar').classList.add('hidden');
+  if (CLIENT) {
+    const badge = document.getElementById('demoBadge');
+    if (badge) { badge.textContent = CLIENT.toUpperCase(); badge.style.display = 'flex'; }
+  }
 
   setupTabs();
   setupSegment();
@@ -84,6 +93,7 @@ async function uploadFile(file) {
   setDot('working', 'Uploading…');
   const form = new FormData();
   form.append('file', file);
+  form.append('client', CLIENT);
   try {
     const res = await fetch('/upload', { method: 'POST', body: form });
     const data = await res.json();
@@ -110,7 +120,7 @@ function setupSheetsLoad() {
       const res = await fetch('/sheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, client: CLIENT }),
       });
       const data = await res.json();
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Load failed'); return; }
@@ -133,7 +143,7 @@ function setupGenerateBtn() {
     show('loading');
     setDot('working', 'Generating brief…');
     try {
-      const res = await fetch('/generate-brief', { method: 'POST' });
+      const res = await fetch('/generate-brief', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: CLIENT }) });
       const data = await res.json();
       hide('loading');
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Failed'); show('emptyState'); return; }
@@ -152,7 +162,7 @@ function setupGenerateBtn() {
 // ── LOAD CURRENT WEEK ON STARTUP ───────────────────────────────────────────
 async function loadCurrentWeek() {
   try {
-    const res = await fetch('/week/current');
+    const res = await fetch('/week/current?client=' + CLIENT);
     const data = await res.json();
     if (!data.week) return;
     currentWeekKey = data.weekKey;
@@ -168,7 +178,7 @@ async function loadCurrentWeek() {
 // ── RENDER BRIEF ───────────────────────────────────────────────────────────
 function renderBrief(brief, weekKey, existingComments) {
   currentWeekKey = weekKey;
-  document.getElementById('briefTitle').textContent = `Creative Brief — ${weekKey}`;
+  document.getElementById('briefTitle').textContent = `Creative Brief — ${displayKey(weekKey)}`;
   document.getElementById('briefMeta').textContent = 'Generated from your Meta Ads export';
   document.getElementById('briefSummary').textContent = brief.summary || '';
 
@@ -220,14 +230,14 @@ async function loadHistory() {
   const empty = document.getElementById('historyEmpty');
   grid.innerHTML = '';
   try {
-    const res = await fetch('/history');
+    const res = await fetch('/history?client=' + CLIENT);
     const data = await res.json();
     if (!data.weeks.length) { show('historyEmpty'); return; }
     hide('historyEmpty');
     grid.innerHTML = data.weeks.map(w => `
       <div class="history-card" data-week="${w}">
         <div>
-          <div class="history-week">${w}</div>
+          <div class="history-week">${displayKey(w)}</div>
           <div class="history-meta">Click to view brief</div>
         </div>
         <div class="history-card-actions">
@@ -419,7 +429,7 @@ let dataSortAsc = true;
 
 async function loadDataTab() {
   try {
-    const res = await fetch('/week/current');
+    const res = await fetch('/week/current?client=' + CLIENT);
     const data = await res.json();
     if (!data.week?.ads?.length) {
       show('dataEmpty');
@@ -428,7 +438,7 @@ async function loadDataTab() {
       return;
     }
     dataAds = data.week.ads;
-    document.getElementById('dataWeekLabel').textContent = data.weekKey + ' · ' + dataAds.length + ' ads';
+    document.getElementById('dataWeekLabel').textContent = displayKey(data.weekKey) + ' · ' + dataAds.length + ' ads';
     hide('dataEmpty');
     renderDataTable();
     document.getElementById('dataTableWrap').classList.remove('hidden');
