@@ -1079,7 +1079,7 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 
 /* ── PRINT ────────────────────────────────────────────────────────────────── */
 @media print {
-  .no-print, .sidebar, .topbar .tabnav, .topbar-right { display: none !important; }
+  .no-print, .sidebar, .topbar .tabnav, .topbar-right, .wakeup-banner { display: none !important; }
   .topbar { backdrop-filter: none; background: #fff; }
   html, body { overflow: auto; height: auto; }
   .layout { display: block; }
