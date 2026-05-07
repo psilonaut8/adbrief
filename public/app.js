@@ -1,6 +1,10 @@
 const isViewOnly = new URLSearchParams(location.search).get('role') === 'summary';
 const CLIENT = (new URLSearchParams(location.search).get('client') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
 let currentWeekKey = null;
+let darkMode = localStorage.getItem('darkMode') === '1';
+let briefView = 'grid';
+let cardSortCol = 'roas';
+let cardSortAsc = false;
 
 function displayKey(key) {
   return key && key.includes('__') ? key.split('__').slice(1).join('__') : (key || '');
@@ -34,6 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupGenerateBtn();
   setupClearBtn();
   setupComments();
+  setupDarkToggle();
+  setupBriefViewToggle();
   loadCurrentWeek();
 });
 
@@ -78,15 +84,46 @@ function setupFileUpload() {
   const drop = document.getElementById('fileDrop');
   const input = document.getElementById('fileInput');
 
-  input.addEventListener('change', () => { if (input.files[0]) uploadFile(input.files[0]); });
+  input.addEventListener('change', () => { if (input.files.length) uploadFiles(input.files); });
 
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
   drop.addEventListener('drop', e => {
     e.preventDefault();
     drop.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
   });
+}
+
+async function uploadFiles(files) {
+  const arr = [...files];
+  if (arr.length === 1) { await uploadFile(arr[0]); return; }
+  let totalAdded = 0, lastTotal = 0;
+  for (let i = 0; i < arr.length; i++) {
+    setStatus(`Uploading file ${i + 1} of ${arr.length}…`);
+    setDot('working', `Uploading ${i + 1}/${arr.length}…`);
+    const form = new FormData();
+    form.append('file', arr[i]);
+    form.append('client', CLIENT);
+    try {
+      const res = await fetch('/upload', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) { setStatus(data.error, true); setDot('error', 'Upload failed'); return; }
+      currentWeekKey = data.weekKey;
+      totalAdded += data.added;
+      lastTotal = data.total;
+    } catch {
+      setStatus('Upload failed. Please try again.', true);
+      setDot('error', 'Upload failed');
+      return;
+    }
+  }
+  const msg = lastTotal > totalAdded ? `${totalAdded} ads added — ${lastTotal} total` : `${lastTotal} ads loaded`;
+  setStatus(msg);
+  setDot('ok', `${lastTotal} ads ready`);
+  document.getElementById('generateBtn').disabled = false;
+  document.getElementById('clearBtn').style.display = 'block';
+  document.querySelector('.drop-main').textContent = `${arr.length} files loaded`;
 }
 
 async function uploadFile(file) {
@@ -485,6 +522,7 @@ async function loadDataTab() {
     if (!dataTabInitialized) {
       setupDataSort();
       setupViewToggle();
+      setupCardSort();
       dataTabInitialized = true;
     }
     renderCurrentDataView();
@@ -498,28 +536,34 @@ function renderCurrentDataView() {
 }
 
 function setupViewToggle() {
-  document.querySelectorAll('.view-btn').forEach(btn => {
+  document.querySelectorAll('[data-view]').forEach(btn => {
     btn.addEventListener('click', () => {
       dataView = btn.dataset.view;
-      document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === dataView));
+      document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === dataView));
       document.getElementById('tableView').classList.toggle('hidden', dataView !== 'table');
       document.getElementById('cardView').classList.toggle('hidden', dataView !== 'cards');
       document.getElementById('chartView').classList.toggle('hidden', dataView !== 'chart');
       document.getElementById('chartMetricBar').classList.toggle('hidden', dataView !== 'chart');
+      document.getElementById('cardSortBar').classList.toggle('hidden', dataView !== 'cards');
       renderCurrentDataView();
     });
   });
-  document.querySelectorAll('.metric-btn').forEach(btn => {
+  document.querySelectorAll('[data-metric]').forEach(btn => {
     btn.addEventListener('click', () => {
       chartMetric = btn.dataset.metric;
-      document.querySelectorAll('.metric-btn').forEach(b => b.classList.toggle('active', b.dataset.metric === chartMetric));
+      document.querySelectorAll('[data-metric]').forEach(b => b.classList.toggle('active', b.dataset.metric === chartMetric));
       renderChartView();
     });
   });
 }
 
 function renderCardView() {
-  document.getElementById('cardView').innerHTML = dataAds.map(ad => `
+  const ads = [...dataAds].sort((a, b) => {
+    const av = parseFloat(a[cardSortCol]) || 0;
+    const bv = parseFloat(b[cardSortCol]) || 0;
+    return cardSortAsc ? av - bv : bv - av;
+  });
+  document.getElementById('cardView').innerHTML = ads.map(ad => `
     <div class="ad-data-card">
       <div class="adc-top">${formatBadge(ad.format)}</div>
       <div class="adc-name">${esc(ad.adName || '—')}</div>
@@ -554,6 +598,7 @@ function roasColor(val) {
 }
 
 function renderChartView() {
+  const dark = document.documentElement.dataset.theme === 'dark';
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   const sorted = [...dataAds]
     .filter(a => !isNaN(parseFloat(a[chartMetric])))
@@ -588,8 +633,8 @@ function renderChartView() {
         }}}
       },
       scales: {
-        x: { grid: { color: 'rgba(60,60,67,0.06)' }, ticks: { font: { size: 11, family: 'Inter' } } },
-        y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' }, color: '#3A3A3C' } }
+        x: { grid: { color: dark ? 'rgba(255,255,255,0.06)' : 'rgba(60,60,67,0.06)' }, ticks: { font: { size: 11, family: 'Inter' }, color: dark ? 'rgba(235,235,245,0.55)' : undefined } },
+        y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' }, color: dark ? 'rgba(235,235,245,0.55)' : '#3A3A3C' } }
       }
     }
   });
@@ -677,6 +722,56 @@ function fmtInt(val) {
   const n = parseInt(val, 10);
   if (isNaN(n)) return '—';
   return n.toLocaleString();
+}
+
+// ── DARK MODE ──────────────────────────────────────────────────────────────
+function setupDarkToggle() {
+  const btn = document.getElementById('darkToggle');
+  btn.textContent = darkMode ? '☀️' : '🌙';
+  btn.addEventListener('click', () => {
+    darkMode = !darkMode;
+    document.documentElement.dataset.theme = darkMode ? 'dark' : '';
+    btn.textContent = darkMode ? '☀️' : '🌙';
+    localStorage.setItem('darkMode', darkMode ? '1' : '0');
+    if (dataView === 'chart' && chartInstance) renderChartView();
+  });
+}
+
+// ── BRIEF VIEWS ─────────────────────────────────────────────────────────────
+function setupBriefViewToggle() {
+  document.querySelectorAll('[data-bview]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      briefView = btn.dataset.bview;
+      document.querySelectorAll('[data-bview]').forEach(b => b.classList.toggle('active', b.dataset.bview === briefView));
+      document.querySelector('.brief-grid').classList.toggle('list-view', briefView === 'list');
+    });
+  });
+}
+
+// ── CARD SORT ──────────────────────────────────────────────────────────────
+function setupCardSort() {
+  updateCardSortUI();
+  document.querySelectorAll('[data-csort]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (cardSortCol === btn.dataset.csort) {
+        cardSortAsc = !cardSortAsc;
+      } else {
+        cardSortCol = btn.dataset.csort;
+        cardSortAsc = false;
+      }
+      updateCardSortUI();
+      renderCardView();
+    });
+  });
+}
+
+function updateCardSortUI() {
+  document.querySelectorAll('[data-csort]').forEach(btn => {
+    const isActive = btn.dataset.csort === cardSortCol;
+    btn.classList.toggle('active', isActive);
+    const label = btn.dataset.csort.toUpperCase();
+    btn.textContent = isActive ? label + (cardSortAsc ? ' ↑' : ' ↓') : label;
+  });
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
