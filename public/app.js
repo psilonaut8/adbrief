@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFileUpload();
   setupSheetsLoad();
   setupGenerateBtn();
+  setupClearBtn();
   setupComments();
   loadCurrentWeek();
 });
@@ -99,9 +100,13 @@ async function uploadFile(file) {
     const data = await res.json();
     if (!res.ok) { setStatus(data.error, true); setDot('error', 'Upload failed'); return; }
     currentWeekKey = data.weekKey;
-    setStatus(`${data.count} ads loaded`);
-    setDot('ok', `${data.count} ads ready`);
+    const msg = data.total > data.added
+      ? `${data.added} ads added — ${data.total} total`
+      : `${data.added} ads loaded`;
+    setStatus(msg);
+    setDot('ok', `${data.total} ads ready`);
     document.getElementById('generateBtn').disabled = false;
+    document.getElementById('clearBtn').style.display = 'block';
     document.querySelector('.drop-main').textContent = file.name;
   } catch {
     setStatus('Upload failed. Please try again.', true);
@@ -125,13 +130,36 @@ function setupSheetsLoad() {
       const data = await res.json();
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Load failed'); return; }
       currentWeekKey = data.weekKey;
-      setStatus(`${data.count} ads loaded`);
-      setDot('ok', `${data.count} ads ready`);
+      const msg = data.total > data.added
+        ? `${data.added} ads added — ${data.total} total`
+        : `${data.added} ads loaded`;
+      setStatus(msg);
+      setDot('ok', `${data.total} ads ready`);
       document.getElementById('generateBtn').disabled = false;
+      document.getElementById('clearBtn').style.display = 'block';
     } catch {
       setStatus('Could not load sheet.', true);
       setDot('error', 'Load failed');
     }
+  });
+}
+
+// ── CLEAR DATA ─────────────────────────────────────────────────────────────
+function setupClearBtn() {
+  document.getElementById('clearBtn').addEventListener('click', async () => {
+    if (!confirm('Clear all uploaded ads for this week? The brief will also be removed.')) return;
+    try {
+      await fetch('/week/current/ads?client=' + CLIENT, { method: 'DELETE' });
+      currentWeekKey = null;
+      setStatus('');
+      setDot('idle', 'No data loaded');
+      document.getElementById('generateBtn').disabled = true;
+      document.getElementById('clearBtn').style.display = 'none';
+      document.querySelector('.drop-main').textContent = 'Drop file or click to browse';
+      hide('briefOutput');
+      hide('loading');
+      show('emptyState');
+    } catch { alert('Could not clear data. Please try again.'); }
   });
 }
 
@@ -170,6 +198,7 @@ async function loadCurrentWeek() {
       setStatus(`${data.week.ads.length} ads loaded`);
       setDot('ok', `${data.week.ads.length} ads ready`);
       document.getElementById('generateBtn').disabled = false;
+      document.getElementById('clearBtn').style.display = 'block';
     }
     if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments);
   } catch { /* silent */ }

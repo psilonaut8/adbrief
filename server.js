@@ -31,11 +31,14 @@ app.post('/upload', upload.single('file'), async (req, res) => {
 
     const weekKey = clientKey(getClient(req), getWeekKey());
     const existing = await loadWeek(weekKey) || {};
-    existing.ads = ads;
+    const prev = existing.ads || [];
+    const prevNames = new Set(prev.map(a => a.adName));
+    const merged = [...prev, ...ads.filter(a => !prevNames.has(a.adName))];
+    existing.ads = merged;
     existing.uploadedAt = new Date().toISOString();
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, count: ads.length });
+    res.json({ ok: true, weekKey, added: ads.length - (ads.length - (merged.length - prev.length)), total: merged.length });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: err.message });
@@ -57,15 +60,28 @@ app.post('/sheets', async (req, res) => {
 
     const weekKey = clientKey(getClient(req), getWeekKey());
     const existing = await loadWeek(weekKey) || {};
-    existing.ads = ads;
+    const prev = existing.ads || [];
+    const prevNames = new Set(prev.map(a => a.adName));
+    const merged = [...prev, ...ads.filter(a => !prevNames.has(a.adName))];
+    existing.ads = merged;
     existing.uploadedAt = new Date().toISOString();
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, count: ads.length });
+    res.json({ ok: true, weekKey, added: merged.length - prev.length, total: merged.length });
   } catch (err) {
     console.error('Sheets error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+// Clear all uploaded ads for the current week
+app.delete('/week/current/ads', async (req, res) => {
+  try {
+    const weekKey = clientKey(getClient(req), getWeekKey());
+    const week = await loadWeek(weekKey);
+    if (week) { week.ads = []; week.brief = null; await saveWeek(weekKey, week); }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Generate a brief from the current week's data
