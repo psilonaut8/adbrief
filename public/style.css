@@ -931,6 +931,12 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
     padding-bottom: 10px;
   }
 
+  .dark-toggle {
+    order: 2;
+    margin-left: 0;
+    padding-bottom: 10px;
+  }
+
   .topbar-right { display: none; }
 
   .tabnav {
