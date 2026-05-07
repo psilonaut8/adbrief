@@ -869,6 +869,20 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 }
 .ad-data-card:hover { box-shadow: var(--shadow-md); border-color: var(--sep); }
 
+.adc-thumb {
+  margin: -14px -14px 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  overflow: hidden;
+  height: 130px;
+  background: var(--surface2);
+}
+.adc-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .adc-top { display: flex; align-items: center; }
 .adc-name { font-size: 13px; font-weight: 600; color: var(--label); line-height: 1.4; }
 

@@ -568,6 +568,7 @@ function renderCardView() {
   });
   document.getElementById('cardView').innerHTML = ads.map(ad => `
     <div class="ad-data-card">
+      ${ad.imageUrl ? `<div class="adc-thumb"><img src="${esc(ad.imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="adc-top">${formatBadge(ad.format)}</div>
       <div class="adc-name">${esc(ad.adName || '—')}</div>
       <div class="adc-metrics">
