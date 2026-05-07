@@ -1038,11 +1038,12 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
     width: 100%;
     border-top: 1px solid var(--sep);
     gap: 0;
-    height: 44px;
+    height: auto;
+    flex-wrap: wrap;
   }
 
   .tab {
-    flex: 1;
+    flex: 0 0 33.333%;
     height: 44px;
     padding: 0;
     font-size: 13px;
@@ -1050,9 +1051,23 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
     border-bottom: none;
     border-top: 2px solid transparent;
   }
+
+  /* Row 2: Trends + How to Use fill the width equally */
+  .tab:nth-child(4),
+  .tab:nth-child(5) {
+    flex: 0 0 50%;
+    border-top: 1px solid var(--sep);
+  }
+
   .tab.active {
     border-top-color: var(--accent);
     border-bottom-color: transparent;
+  }
+
+  /* Row 2 active tab uses the top border of the row separator */
+  .tab:nth-child(4).active,
+  .tab:nth-child(5).active {
+    border-top-color: var(--accent);
   }
 
   html, body { overflow: auto; }
