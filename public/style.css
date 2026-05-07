@@ -1022,13 +1022,12 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   }
 
   .brand {
-    margin-right: auto;
     padding-bottom: 10px;
   }
 
   .dark-toggle {
     order: 2;
-    margin-left: 0;
+    margin-left: auto;
     padding-bottom: 10px;
   }
 
