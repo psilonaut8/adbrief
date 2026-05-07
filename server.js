@@ -222,5 +222,50 @@ app.post('/reaction', async (req, res) => {
   }
 });
 
+// ── TEMP: seed a fake previous week for history testing ────────────────────
+app.get('/dev/seed-history', async (req, res) => {
+  try {
+    const current = getWeekKey();
+    const [year, wk] = current.split('-W').map(Number);
+    const prevKey = wk <= 1 ? `${year - 1}-W52` : `${year}-W${String(wk - 1).padStart(2, '0')}`;
+    const client = getClient(req);
+    const fullKey = clientKey(client, prevKey);
+
+    const mockAds = [
+      { adName: 'Reel — Winter launch hero', format: 'Reel', spend: 1800, roas: 4.9, ctr: 3.1, cpc: 0.49, cpm: 15.2, impressions: 118000, clicks: 3658, reach: 98000, frequency: 1.2 },
+      { adName: 'Video — Behind the scenes', format: 'Video', spend: 920, roas: 3.2, ctr: 2.3, cpc: 0.63, cpm: 14.5, impressions: 63000, clicks: 1449, reach: 55000, frequency: 1.15 },
+      { adName: 'Carousel — Gift guide top 5', format: 'Carousel', spend: 540, roas: 2.1, ctr: 1.4, cpc: 1.08, cpm: 14.9, impressions: 36000, clicks: 504, reach: 32000, frequency: 1.1 },
+      { adName: 'Static Image — Holiday offer', format: 'Static', spend: 210, roas: 0.8, ctr: 0.9, cpc: 1.55, cpm: 13.4, impressions: 15000, clicks: 135, reach: 14000, frequency: 1.07 },
+      { adName: 'UGC Video — Real customer story', format: 'Video', spend: 1350, roas: 4.4, ctr: 2.9, cpc: 0.52, cpm: 15.0, impressions: 90000, clicks: 2610, reach: 78000, frequency: 1.15 },
+    ];
+
+    const mockBrief = {
+      summary: 'Strong week led by Reels and UGC. Short-form video outperformed static by 4x on ROAS. Carousel showed moderate results. Static holiday creative underperformed — high frequency with low conversion suggests creative fatigue setting in early.',
+      topPerformers: [
+        { adName: 'Reel — Winter launch hero', why: 'Highest ROAS at 4.9 with strong CTR of 3.1%. Efficient spend with broad reach.', action: 'Scale budget by 30% and test a v2 with alternate hook.' },
+        { adName: 'UGC Video — Real customer story', why: 'ROAS 4.4 with authentic tone driving high engagement. Low CPC shows strong audience fit.', action: 'Duplicate and test with a different thumbnail.' },
+      ],
+      makeNext: [
+        { concept: 'Reel — Customer unboxing moment', rationale: 'UGC and Reel formats are both working. Combining them should amplify results.' },
+        { concept: 'Carousel — Before and after results', rationale: 'Carousel format has potential but needs stronger creative hook to convert.' },
+      ],
+      fatigueAlerts: [
+        { adName: 'Static Image — Holiday offer', why: 'Frequency climbing without conversion improvement. Audience is tuning it out.', action: 'Refresh creative or pause for 7 days.' },
+      ],
+      underperformers: [
+        { adName: 'Carousel — Gift guide top 5', why: 'ROAS of 2.1 is below break-even. CTR low despite reasonable impressions.', action: 'Test a stronger opening card and clearer CTA.' },
+      ],
+      retireNow: [
+        { adName: 'Static Image — Holiday offer', reason: 'ROAS below 1.0 means spending more than returning. No signs of recovery.' },
+      ],
+    };
+
+    await saveWeek(fullKey, { ads: mockAds, brief: mockBrief, uploadedAt: new Date().toISOString(), generatedAt: new Date().toISOString(), comments: [] });
+    res.json({ ok: true, seeded: fullKey });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`AdBrief running on http://localhost:${PORT}`));
