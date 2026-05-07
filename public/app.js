@@ -255,6 +255,14 @@ async function loadHistory() {
         if (!confirm(`Delete the brief for ${btn.dataset.week}? This cannot be undone.`)) return;
         try {
           await fetch(`/week/${btn.dataset.week}`, { method: 'DELETE' });
+          if (btn.dataset.week === currentWeekKey) {
+            currentWeekKey = null;
+            hide('briefOutput');
+            hide('loading');
+            show('emptyState');
+            setDot('idle', 'No data loaded');
+            document.getElementById('generateBtn').disabled = true;
+          }
           loadHistory();
         } catch {
           alert('Could not delete. Please try again.');
