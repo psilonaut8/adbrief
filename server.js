@@ -222,46 +222,120 @@ app.post('/reaction', async (req, res) => {
   }
 });
 
-// ── TEMP: seed a fake previous week for history testing ────────────────────
+// ── TEMP: seed fake previous weeks for history testing ─────────────────────
 app.get('/dev/seed-history', async (req, res) => {
   try {
     const current = getWeekKey();
-    const [year, wk] = current.split('-W').map(Number);
-    const prevKey = wk <= 1 ? `${year - 1}-W52` : `${year}-W${String(wk - 1).padStart(2, '0')}`;
     const client = getClient(req);
-    const fullKey = clientKey(client, prevKey);
 
-    const mockAds = [
-      { adName: 'Reel — Winter launch hero', format: 'Reel', spend: 1800, roas: 4.9, ctr: 3.1, cpc: 0.49, cpm: 15.2, impressions: 118000, clicks: 3658, reach: 98000, frequency: 1.2 },
-      { adName: 'Video — Behind the scenes', format: 'Video', spend: 920, roas: 3.2, ctr: 2.3, cpc: 0.63, cpm: 14.5, impressions: 63000, clicks: 1449, reach: 55000, frequency: 1.15 },
-      { adName: 'Carousel — Gift guide top 5', format: 'Carousel', spend: 540, roas: 2.1, ctr: 1.4, cpc: 1.08, cpm: 14.9, impressions: 36000, clicks: 504, reach: 32000, frequency: 1.1 },
-      { adName: 'Static Image — Holiday offer', format: 'Static', spend: 210, roas: 0.8, ctr: 0.9, cpc: 1.55, cpm: 13.4, impressions: 15000, clicks: 135, reach: 14000, frequency: 1.07 },
-      { adName: 'UGC Video — Real customer story', format: 'Video', spend: 1350, roas: 4.4, ctr: 2.9, cpc: 0.52, cpm: 15.0, impressions: 90000, clicks: 2610, reach: 78000, frequency: 1.15 },
+    function weekOffset(baseKey, n) {
+      const [year, wk] = baseKey.split('-W').map(Number);
+      let y = year, w = wk - n;
+      while (w < 1) { w += 52; y -= 1; }
+      return `${y}-W${String(w).padStart(2, '0')}`;
+    }
+
+    const weeks = [
+      {
+        key: weekOffset(current, 1),
+        ads: [
+          { adName: 'Reel — Winter launch hero', format: 'Reel', spend: 1800, roas: 4.9, ctr: 3.1, cpc: 0.49, cpm: 15.2, impressions: 118000, clicks: 3658, reach: 98000, frequency: 1.2 },
+          { adName: 'UGC Video — Real customer story', format: 'Video', spend: 1350, roas: 4.4, ctr: 2.9, cpc: 0.52, cpm: 15.0, impressions: 90000, clicks: 2610, reach: 78000, frequency: 1.15 },
+          { adName: 'Video — Behind the scenes', format: 'Video', spend: 920, roas: 3.2, ctr: 2.3, cpc: 0.63, cpm: 14.5, impressions: 63000, clicks: 1449, reach: 55000, frequency: 1.15 },
+          { adName: 'Reel — 60 second results reveal', format: 'Reel', spend: 1100, roas: 4.1, ctr: 2.8, cpc: 0.53, cpm: 14.9, impressions: 74000, clicks: 2072, reach: 65000, frequency: 1.14 },
+          { adName: 'Carousel — Gift guide top 5', format: 'Carousel', spend: 540, roas: 2.1, ctr: 1.4, cpc: 1.07, cpm: 15.0, impressions: 36000, clicks: 504, reach: 32000, frequency: 1.1 },
+          { adName: 'Static Image — Holiday offer', format: 'Static', spend: 210, roas: 0.8, ctr: 0.9, cpc: 1.56, cpm: 14.0, impressions: 15000, clicks: 135, reach: 14000, frequency: 1.07 },
+          { adName: 'Static Image — New year new you', format: 'Static', spend: 310, roas: 1.1, ctr: 1.1, cpc: 1.34, cpm: 14.8, impressions: 21000, clicks: 231, reach: 19000, frequency: 1.1 },
+          { adName: 'Video — Product demo walkthrough', format: 'Video', spend: 660, roas: 2.8, ctr: 2.1, cpc: 0.71, cpm: 15.0, impressions: 44000, clicks: 924, reach: 40000, frequency: 1.1 },
+        ],
+        summary: 'Strong week led by Reels and UGC. Short-form video outperformed static by 4x on ROAS. Static holiday creative flagging — frequency climbing with no conversion lift.',
+        topPerformers: [
+          { adName: 'Reel — Winter launch hero', why: 'ROAS 4.9 with CTR 3.1%. Broad reach and efficient spend.', action: 'Scale budget 30% and test a v2 with alternate hook.' },
+          { adName: 'UGC Video — Real customer story', why: 'ROAS 4.4 with authentic tone driving high engagement.', action: 'Duplicate and test with a different thumbnail.' },
+        ],
+        makeNext: [
+          { concept: 'Reel — Customer unboxing moment', rationale: 'UGC and Reel formats are both working — combining them should amplify results.' },
+          { concept: 'Carousel — Before and after results', rationale: 'Carousel has potential but needs a stronger opening card.' },
+        ],
+        fatigueAlerts: [
+          { adName: 'Static Image — Holiday offer', why: 'Frequency climbing with no conversion improvement.', action: 'Refresh creative or pause for 7 days.' },
+        ],
+        underperformers: [
+          { adName: 'Carousel — Gift guide top 5', why: 'ROAS 2.1 below break-even. CTR low despite reasonable impressions.', action: 'Test a stronger opening card and clearer CTA.' },
+        ],
+        retireNow: [
+          { adName: 'Static Image — Holiday offer', reason: 'ROAS below 1.0. Spending more than returning with no recovery trend.' },
+        ],
+      },
+      {
+        key: weekOffset(current, 2),
+        ads: [
+          { adName: 'Video — First video test hook A', format: 'Video', spend: 680, roas: 3.1, ctr: 2.2, cpc: 0.67, cpm: 14.8, impressions: 46000, clicks: 1012, reach: 41000, frequency: 1.12 },
+          { adName: 'UGC Video — Trial run first week', format: 'Video', spend: 890, roas: 3.6, ctr: 2.2, cpc: 0.67, cpm: 14.8, impressions: 60000, clicks: 1335, reach: 54000, frequency: 1.11 },
+          { adName: 'Carousel — Top 3 reasons customers love us', format: 'Carousel', spend: 720, roas: 2.4, ctr: 1.3, cpc: 1.15, cpm: 15.0, impressions: 48000, clicks: 624, reach: 43000, frequency: 1.12 },
+          { adName: 'Static Image — Lifestyle shot morning', format: 'Static', spend: 1100, roas: 2.8, ctr: 1.1, cpc: 1.37, cpm: 15.1, impressions: 73000, clicks: 803, reach: 67000, frequency: 1.09 },
+          { adName: 'Static Image — Clean and simple v1', format: 'Static', spend: 820, roas: 2.2, ctr: 1.2, cpc: 1.24, cpm: 14.9, impressions: 55000, clicks: 660, reach: 50000, frequency: 1.1 },
+          { adName: 'Static Image — Text heavy offer', format: 'Static', spend: 310, roas: 0.7, ctr: 0.8, cpc: 1.85, cpm: 14.8, impressions: 21000, clicks: 168, reach: 20000, frequency: 1.05 },
+          { adName: 'Static Image — Discount banner', format: 'Static', spend: 280, roas: 0.6, ctr: 0.8, cpc: 1.96, cpm: 14.7, impressions: 19000, clicks: 143, reach: 18000, frequency: 1.06 },
+        ],
+        summary: 'First video tests showing promise with ROAS above 3. Heavy static week overall — lifestyle imagery outperforming offer-led creatives. Discount and text-heavy ads underperforming badly.',
+        topPerformers: [
+          { adName: 'UGC Video — Trial run first week', why: 'Best performer at ROAS 3.6. UGC tone connecting with audience early.', action: 'Produce 2 more UGC-style videos with different hooks.' },
+          { adName: 'Video — First video test hook A', why: 'ROAS 3.1 on a first test is a strong signal.', action: 'Test hook B and C variants to find the best angle.' },
+        ],
+        makeNext: [
+          { concept: 'Reel — Short UGC testimonial', rationale: 'UGC video working well — a shorter Reel format could extend reach on Reels placement.' },
+        ],
+        fatigueAlerts: [],
+        underperformers: [
+          { adName: 'Static Image — Text heavy offer', why: 'ROAS 0.7 with low CTR. Audience not engaging with offer-led copy.', action: 'Strip back to a single benefit and test cleaner visual.' },
+        ],
+        retireNow: [
+          { adName: 'Static Image — Discount banner', reason: 'ROAS 0.6. Discount framing is hurting brand perception and not converting.' },
+        ],
+      },
+      {
+        key: weekOffset(current, 3),
+        ads: [
+          { adName: 'Static Image — Brand launch hero', format: 'Static', spend: 1400, roas: 2.6, ctr: 1.1, cpc: 1.37, cpm: 15.1, impressions: 93000, clicks: 1023, reach: 87000, frequency: 1.07 },
+          { adName: 'Static Image — After 4 weeks result', format: 'Static', spend: 1050, roas: 2.4, ctr: 1.1, cpc: 1.36, cpm: 15.0, impressions: 70000, clicks: 770, reach: 66000, frequency: 1.06 },
+          { adName: 'Static Image — Launch week limited offer', format: 'Static', spend: 1650, roas: 3.1, ctr: 1.05, cpc: 1.43, cpm: 15.0, impressions: 110000, clicks: 1155, reach: 102000, frequency: 1.08 },
+          { adName: 'Carousel — Brand story three slides', format: 'Carousel', spend: 850, roas: 2.3, ctr: 1.1, cpc: 1.36, cpm: 14.9, impressions: 57000, clicks: 627, reach: 52000, frequency: 1.1 },
+          { adName: 'Static Image — Product range flat lay', format: 'Static', spend: 1100, roas: 2.1, ctr: 1.0, cpc: 1.51, cpm: 15.1, impressions: 73000, clicks: 730, reach: 69000, frequency: 1.06 },
+          { adName: 'Static Image — Simple clean offer', format: 'Static', spend: 680, roas: 1.4, ctr: 0.8, cpc: 1.89, cpm: 15.1, impressions: 45000, clicks: 360, reach: 43000, frequency: 1.05 },
+          { adName: 'Static Image — Trust badges social proof', format: 'Static', spend: 720, roas: 1.6, ctr: 0.8, cpc: 1.88, cpm: 15.0, impressions: 48000, clicks: 384, reach: 46000, frequency: 1.04 },
+        ],
+        summary: 'Launch week — all static, heavy brand awareness spend. Limited offer outperformed at ROAS 3.1 but most creatives hovering around 2x. No video yet. Strong reach numbers but CTR across the board is low, suggesting top-of-funnel audience.',
+        topPerformers: [
+          { adName: 'Static Image — Launch week limited offer', why: 'Best ROAS at 3.1 with the highest reach. Urgency framing working for launch.', action: 'Keep running but plan a refresh before frequency builds.' },
+        ],
+        makeNext: [
+          { concept: 'Video — Brand story 30 seconds', rationale: 'All static this week. A single video test could unlock significantly better ROAS.' },
+          { concept: 'UGC — Real customer first impression', rationale: 'Launch audience is cold. Authentic social proof could improve conversion rate.' },
+        ],
+        fatigueAlerts: [],
+        underperformers: [
+          { adName: 'Static Image — Simple clean offer', why: 'ROAS 1.4 with weak CTR. Clean aesthetic not communicating value clearly.', action: 'Add a stronger benefit headline.' },
+          { adName: 'Static Image — Trust badges social proof', why: 'ROAS 1.6 — trust badges alone not enough to convert cold audience.', action: 'Pair with a product shot and single testimonial.' },
+        ],
+        retireNow: [],
+      },
     ];
 
-    const mockBrief = {
-      summary: 'Strong week led by Reels and UGC. Short-form video outperformed static by 4x on ROAS. Carousel showed moderate results. Static holiday creative underperformed — high frequency with low conversion suggests creative fatigue setting in early.',
-      topPerformers: [
-        { adName: 'Reel — Winter launch hero', why: 'Highest ROAS at 4.9 with strong CTR of 3.1%. Efficient spend with broad reach.', action: 'Scale budget by 30% and test a v2 with alternate hook.' },
-        { adName: 'UGC Video — Real customer story', why: 'ROAS 4.4 with authentic tone driving high engagement. Low CPC shows strong audience fit.', action: 'Duplicate and test with a different thumbnail.' },
-      ],
-      makeNext: [
-        { concept: 'Reel — Customer unboxing moment', rationale: 'UGC and Reel formats are both working. Combining them should amplify results.' },
-        { concept: 'Carousel — Before and after results', rationale: 'Carousel format has potential but needs stronger creative hook to convert.' },
-      ],
-      fatigueAlerts: [
-        { adName: 'Static Image — Holiday offer', why: 'Frequency climbing without conversion improvement. Audience is tuning it out.', action: 'Refresh creative or pause for 7 days.' },
-      ],
-      underperformers: [
-        { adName: 'Carousel — Gift guide top 5', why: 'ROAS of 2.1 is below break-even. CTR low despite reasonable impressions.', action: 'Test a stronger opening card and clearer CTA.' },
-      ],
-      retireNow: [
-        { adName: 'Static Image — Holiday offer', reason: 'ROAS below 1.0 means spending more than returning. No signs of recovery.' },
-      ],
-    };
+    const seeded = [];
+    for (const w of weeks) {
+      const fullKey = clientKey(client, w.key);
+      await saveWeek(fullKey, {
+        ads: w.ads,
+        brief: { summary: w.summary, topPerformers: w.topPerformers, makeNext: w.makeNext, fatigueAlerts: w.fatigueAlerts, underperformers: w.underperformers, retireNow: w.retireNow },
+        uploadedAt: new Date().toISOString(),
+        generatedAt: new Date().toISOString(),
+        comments: [],
+      });
+      seeded.push(fullKey);
+    }
 
-    await saveWeek(fullKey, { ads: mockAds, brief: mockBrief, uploadedAt: new Date().toISOString(), generatedAt: new Date().toISOString(), comments: [] });
-    res.json({ ok: true, seeded: fullKey });
+    res.json({ ok: true, seeded });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
