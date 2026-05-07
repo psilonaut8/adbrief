@@ -143,6 +143,33 @@ app.delete('/week/:key', async (req, res) => {
   }
 });
 
+// Aggregated weekly metrics for trend charts
+app.get('/trends', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const weeks = (await listWeeks(client)).sort();
+    const result = [];
+    for (const wk of weeks) {
+      const week = await loadWeek(wk);
+      if (!week?.ads?.length) continue;
+      const ads = week.ads;
+      const spend = ads.reduce((s, a) => s + (parseFloat(a.spend) || 0), 0);
+      const roasAds = ads.filter(a => a.roas != null);
+      const ctrAds  = ads.filter(a => a.ctr  != null);
+      result.push({
+        week: wk,
+        spend:    Math.round(spend),
+        roas:     roasAds.length ? Math.round(roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length * 100) / 100 : null,
+        ctr:      ctrAds.length  ? Math.round(ctrAds.reduce((s, a)  => s + a.ctr,  0) / ctrAds.length  * 100) / 100 : null,
+        adCount:  ads.length,
+      });
+    }
+    res.json({ ok: true, weeks: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // List all saved weeks
 app.get('/history', async (req, res) => {
   try {

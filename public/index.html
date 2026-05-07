@@ -24,6 +24,7 @@
       <button class="tab active" data-panel="brief">Brief</button>
       <button class="tab" data-panel="data">Data</button>
       <button class="tab" data-panel="history">History</button>
+      <button class="tab" data-panel="trends">Trends</button>
       <button class="tab" data-panel="howto">How to Use</button>
     </nav>
     <button class="dark-toggle" id="darkToggle" title="Toggle dark mode">🌙</button>
@@ -205,6 +206,7 @@
                 <thead>
                   <tr>
                     <th data-col="adName"      class="sortable">Ad Name</th>
+                    <th data-col="dateStart"   class="sortable" id="thDate" style="display:none">Date</th>
                     <th data-col="format"      class="sortable">Format</th>
                     <th data-col="spend"       class="sortable num">Spend</th>
                     <th data-col="roas"        class="sortable num">ROAS</th>
@@ -220,6 +222,44 @@
             </div>
             <div id="cardView" class="card-grid hidden"></div>
             <div id="chartView" class="chart-wrap hidden"><canvas id="adChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRENDS PANEL -->
+      <div class="panel-view" id="panel-trends">
+        <div class="content-header">
+          <h1>Trends</h1>
+        </div>
+        <div class="empty-state hidden" id="trendsEmpty">
+          <div class="empty-icon">📈</div>
+          <div class="empty-title">Not enough data yet</div>
+          <div class="empty-sub">Generate briefs for at least 2 weeks to see trends.</div>
+        </div>
+        <div id="trendsContent" class="hidden">
+          <div class="data-card" style="margin-bottom:12px">
+            <div class="data-toolbar">
+              <div class="chart-metric-bar">
+                <button class="metric-btn active" data-tmetric="roas">Avg ROAS</button>
+                <button class="metric-btn" data-tmetric="spend">Total Spend</button>
+                <button class="metric-btn" data-tmetric="ctr">Avg CTR</button>
+              </div>
+            </div>
+            <div class="chart-wrap" style="height:280px;padding:16px"><canvas id="trendsChart"></canvas></div>
+          </div>
+          <div class="data-card">
+            <table class="data-table" id="trendsTable">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th class="num">Total Spend</th>
+                  <th class="num">Avg ROAS</th>
+                  <th class="num">Avg CTR</th>
+                  <th class="num">Ads</th>
+                </tr>
+              </thead>
+              <tbody id="trendsTableBody"></tbody>
+            </table>
           </div>
         </div>
       </div>

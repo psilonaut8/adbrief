@@ -774,6 +774,8 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   white-space: nowrap;
 }
 .data-table tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tbody td.date-cell { color: var(--label3); white-space: nowrap; font-size: 12px; }
+
 .data-table tbody td.ad-name-cell {
   color: var(--label);
   font-weight: 500;

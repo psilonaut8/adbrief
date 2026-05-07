@@ -52,9 +52,9 @@ function setupTabs() {
       btn.classList.add('active');
       document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
 
-      // Hide sidebar on how-to and data tabs
+      // Hide sidebar on how-to, data, and trends tabs
       const sidebar = document.getElementById('sidebar');
-      if (btn.dataset.panel === 'howto' || btn.dataset.panel === 'data') {
+      if (btn.dataset.panel === 'howto' || btn.dataset.panel === 'data' || btn.dataset.panel === 'trends') {
         sidebar.classList.add('hidden');
       } else {
         if (!isViewOnly) sidebar.classList.remove('hidden');
@@ -62,6 +62,7 @@ function setupTabs() {
 
       if (btn.dataset.panel === 'history') loadHistory();
       if (btn.dataset.panel === 'data') loadDataTab();
+      if (btn.dataset.panel === 'trends') loadTrendsTab();
     });
   });
 }
@@ -517,6 +518,8 @@ async function loadDataTab() {
     }
     dataAds = data.week.ads;
     document.getElementById('dataWeekLabel').textContent = displayKey(data.weekKey) + ' · ' + dataAds.length + ' ads';
+    const hasDate = dataAds.some(a => a.dateStart || a.dateCreated);
+    document.getElementById('thDate').style.display = hasDate ? '' : 'none';
     hide('dataEmpty');
     document.getElementById('dataTableWrap').classList.remove('hidden');
     if (!dataTabInitialized) {
@@ -672,9 +675,11 @@ function renderDataTable() {
     });
   }
 
+  const showDate = document.getElementById('thDate').style.display !== 'none';
   document.getElementById('dataTableBody').innerHTML = rows.map(ad => `
     <tr>
       <td class="ad-name-cell">${esc(ad.adName || '—')}</td>
+      ${showDate ? `<td class="date-cell">${esc(ad.dateCreated || ad.dateStart || '—')}</td>` : ''}
       <td>${formatBadge(ad.format)}</td>
       <td class="num">${fmtNum(ad.spend, '$')}</td>
       <td class="num">${fmtNum(ad.roas)}</td>
@@ -724,6 +729,97 @@ function fmtInt(val) {
   return n.toLocaleString();
 }
 
+// ── TRENDS TAB ─────────────────────────────────────────────────────────────
+let trendsChart = null;
+let trendsMetric = 'roas';
+let trendsData = [];
+
+async function loadTrendsTab() {
+  try {
+    const res = await fetch('/trends?client=' + CLIENT);
+    const json = await res.json();
+    trendsData = json.weeks || [];
+    if (trendsData.length < 2) {
+      show('trendsEmpty');
+      hide('trendsContent');
+      return;
+    }
+    hide('trendsEmpty');
+    show('trendsContent');
+    setupTrendsMetricBtns();
+    renderTrendsChart();
+    renderTrendsTable();
+  } catch { show('trendsEmpty'); hide('trendsContent'); }
+}
+
+function setupTrendsMetricBtns() {
+  document.querySelectorAll('[data-tmetric]').forEach(btn => {
+    btn.onclick = () => {
+      trendsMetric = btn.dataset.tmetric;
+      document.querySelectorAll('[data-tmetric]').forEach(b => b.classList.toggle('active', b.dataset.tmetric === trendsMetric));
+      renderTrendsChart();
+    };
+  });
+}
+
+function renderTrendsChart() {
+  const dark = document.documentElement.dataset.theme === 'dark';
+  if (trendsChart) { trendsChart.destroy(); trendsChart = null; }
+
+  const labels = trendsData.map(w => displayKey(w.week));
+  const values = trendsData.map(w => w[trendsMetric]);
+  const colors = { roas: '#34C759', spend: '#1B6EF3', ctr: '#FF9500' };
+  const color = colors[trendsMetric] || '#1B6EF3';
+  const gridColor = dark ? 'rgba(255,255,255,0.06)' : 'rgba(60,60,67,0.08)';
+  const tickColor = dark ? 'rgba(235,235,245,0.55)' : '#636366';
+
+  trendsChart = new Chart(document.getElementById('trendsChart'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        borderColor: color,
+        backgroundColor: color + '22',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: color,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => {
+          const v = ctx.raw;
+          if (trendsMetric === 'spend') return ` $${v.toLocaleString()}`;
+          if (trendsMetric === 'ctr') return ` ${v.toFixed(2)}%`;
+          return ` ${v.toFixed(2)}`;
+        }}}
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { font: { size: 12, family: 'Inter' }, color: tickColor } },
+        y: { grid: { color: gridColor }, ticks: { font: { size: 12, family: 'Inter' }, color: tickColor } },
+      }
+    }
+  });
+}
+
+function renderTrendsTable() {
+  document.getElementById('trendsTableBody').innerHTML = [...trendsData].reverse().map(w => `
+    <tr>
+      <td style="font-weight:600">${esc(displayKey(w.week))}</td>
+      <td class="num">$${(w.spend || 0).toLocaleString()}</td>
+      <td class="num ${roasColor(w.roas)}">${w.roas != null ? w.roas.toFixed(2) : '—'}</td>
+      <td class="num">${w.ctr != null ? w.ctr.toFixed(2) + '%' : '—'}</td>
+      <td class="num">${w.adCount}</td>
+    </tr>
+  `).join('');
+}
+
 // ── DARK MODE ──────────────────────────────────────────────────────────────
 function setupDarkToggle() {
   const btn = document.getElementById('darkToggle');
@@ -734,6 +830,7 @@ function setupDarkToggle() {
     btn.textContent = darkMode ? '☀️' : '🌙';
     localStorage.setItem('darkMode', darkMode ? '1' : '0');
     if (dataView === 'chart' && chartInstance) renderChartView();
+    if (trendsChart) renderTrendsChart();
   });
 }
 
