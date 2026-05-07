@@ -6,7 +6,7 @@ const path = require('path');
 
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getPreviousWeekSummary, saveComments, deleteWeek } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek } = require('./lib/storage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -93,8 +93,8 @@ app.post('/generate-brief', async (req, res) => {
       return res.status(400).json({ error: 'No data for this week. Upload a file or load from Sheets first.' });
     }
 
-    const prevSummary = await getPreviousWeekSummary(weekKey);
-    const result = await generateBrief(week.ads, prevSummary);
+    const historySummary = await getRecentHistory(weekKey, 4);
+    const result = await generateBrief(week.ads, historySummary);
 
     if (!result.ok) {
       return res.status(500).json({ error: 'AI response could not be parsed.', raw: result.raw });

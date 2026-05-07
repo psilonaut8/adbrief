@@ -463,6 +463,10 @@ function _drawComments() {
 let dataAds = [];
 let dataSortCol = null;
 let dataSortAsc = true;
+let dataView = 'table';
+let chartInstance = null;
+let chartMetric = 'roas';
+let dataTabInitialized = false;
 
 async function loadDataTab() {
   try {
@@ -477,10 +481,118 @@ async function loadDataTab() {
     dataAds = data.week.ads;
     document.getElementById('dataWeekLabel').textContent = displayKey(data.weekKey) + ' · ' + dataAds.length + ' ads';
     hide('dataEmpty');
-    renderDataTable();
     document.getElementById('dataTableWrap').classList.remove('hidden');
-    setupDataSort();
+    if (!dataTabInitialized) {
+      setupDataSort();
+      setupViewToggle();
+      dataTabInitialized = true;
+    }
+    renderCurrentDataView();
   } catch { /* silent */ }
+}
+
+function renderCurrentDataView() {
+  if (dataView === 'table') renderDataTable();
+  else if (dataView === 'cards') renderCardView();
+  else renderChartView();
+}
+
+function setupViewToggle() {
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      dataView = btn.dataset.view;
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === dataView));
+      document.getElementById('tableView').classList.toggle('hidden', dataView !== 'table');
+      document.getElementById('cardView').classList.toggle('hidden', dataView !== 'cards');
+      document.getElementById('chartView').classList.toggle('hidden', dataView !== 'chart');
+      document.getElementById('chartMetricBar').classList.toggle('hidden', dataView !== 'chart');
+      renderCurrentDataView();
+    });
+  });
+  document.querySelectorAll('.metric-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chartMetric = btn.dataset.metric;
+      document.querySelectorAll('.metric-btn').forEach(b => b.classList.toggle('active', b.dataset.metric === chartMetric));
+      renderChartView();
+    });
+  });
+}
+
+function renderCardView() {
+  document.getElementById('cardView').innerHTML = dataAds.map(ad => `
+    <div class="ad-data-card">
+      <div class="adc-top">${formatBadge(ad.format)}</div>
+      <div class="adc-name">${esc(ad.adName || '—')}</div>
+      <div class="adc-metrics">
+        <div class="adc-metric">
+          <span class="adc-label">ROAS</span>
+          <span class="adc-value ${roasColor(ad.roas)}">${fmtNum(ad.roas)}</span>
+        </div>
+        <div class="adc-metric">
+          <span class="adc-label">Spend</span>
+          <span class="adc-value">${fmtNum(ad.spend, '$')}</span>
+        </div>
+        <div class="adc-metric">
+          <span class="adc-label">CTR</span>
+          <span class="adc-value">${fmtPct(ad.ctr)}</span>
+        </div>
+        <div class="adc-metric">
+          <span class="adc-label">Clicks</span>
+          <span class="adc-value">${fmtInt(ad.clicks)}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function roasColor(val) {
+  const n = parseFloat(val);
+  if (isNaN(n)) return '';
+  if (n >= 3) return 'val-green';
+  if (n >= 1.5) return 'val-orange';
+  return 'val-red';
+}
+
+function renderChartView() {
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  const sorted = [...dataAds]
+    .filter(a => !isNaN(parseFloat(a[chartMetric])))
+    .sort((a, b) => (parseFloat(b[chartMetric]) || 0) - (parseFloat(a[chartMetric]) || 0))
+    .slice(0, 25);
+  const labels = sorted.map(a => { const n = a.adName || '—'; return n.length > 38 ? n.slice(0, 38) + '…' : n; });
+  const values = sorted.map(a => parseFloat(a[chartMetric]) || 0);
+  const colors = sorted.map(a => {
+    if (chartMetric === 'roas') {
+      const r = parseFloat(a.roas);
+      return r >= 3 ? '#34C759' : r >= 1.5 ? '#FF9500' : '#FF3B30';
+    }
+    return '#1B6EF3';
+  });
+  const chartWrap = document.getElementById('chartView');
+  chartWrap.style.height = Math.max(320, sorted.length * 38 + 40) + 'px';
+  chartInstance = new Chart(document.getElementById('adChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 4, borderSkipped: false }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => {
+          const v = ctx.raw;
+          if (['spend','cpc','cpm'].includes(chartMetric)) return ` $${v.toFixed(2)}`;
+          if (chartMetric === 'ctr') return ` ${v.toFixed(2)}%`;
+          if (['impressions','clicks'].includes(chartMetric)) return ` ${Math.round(v).toLocaleString()}`;
+          return ` ${v.toFixed(2)}`;
+        }}}
+      },
+      scales: {
+        x: { grid: { color: 'rgba(60,60,67,0.06)' }, ticks: { font: { size: 11, family: 'Inter' } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' }, color: '#3A3A3C' } }
+      }
+    }
+  });
 }
 
 function formatBadge(raw) {

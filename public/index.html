@@ -171,22 +171,40 @@
             <div class="empty-sub">Upload a Meta export on the Brief tab first.</div>
           </div>
           <div id="dataTableWrap" class="hidden">
-            <table class="data-table" id="dataTable">
-              <thead>
-                <tr>
-                  <th data-col="adName"    class="sortable">Ad Name</th>
-                  <th data-col="format"    class="sortable">Format</th>
-                  <th data-col="spend"     class="sortable num">Spend</th>
-                  <th data-col="roas"      class="sortable num">ROAS</th>
-                  <th data-col="ctr"       class="sortable num">CTR</th>
-                  <th data-col="cpc"       class="sortable num">CPC</th>
-                  <th data-col="cpm"       class="sortable num">CPM</th>
-                  <th data-col="impressions" class="sortable num">Impressions</th>
-                  <th data-col="clicks"    class="sortable num">Clicks</th>
-                </tr>
-              </thead>
-              <tbody id="dataTableBody"></tbody>
-            </table>
+            <div class="data-toolbar">
+              <div class="view-toggle">
+                <button class="view-btn active" data-view="table">≡ Table</button>
+                <button class="view-btn" data-view="cards">⊞ Cards</button>
+                <button class="view-btn" data-view="chart">▦ Chart</button>
+              </div>
+              <div class="chart-metric-bar hidden" id="chartMetricBar">
+                <button class="metric-btn active" data-metric="roas">ROAS</button>
+                <button class="metric-btn" data-metric="spend">Spend</button>
+                <button class="metric-btn" data-metric="ctr">CTR</button>
+                <button class="metric-btn" data-metric="clicks">Clicks</button>
+                <button class="metric-btn" data-metric="impressions">Impressions</button>
+              </div>
+            </div>
+            <div id="tableView" style="overflow-x:auto">
+              <table class="data-table" id="dataTable">
+                <thead>
+                  <tr>
+                    <th data-col="adName"      class="sortable">Ad Name</th>
+                    <th data-col="format"      class="sortable">Format</th>
+                    <th data-col="spend"       class="sortable num">Spend</th>
+                    <th data-col="roas"        class="sortable num">ROAS</th>
+                    <th data-col="ctr"         class="sortable num">CTR</th>
+                    <th data-col="cpc"         class="sortable num">CPC</th>
+                    <th data-col="cpm"         class="sortable num">CPM</th>
+                    <th data-col="impressions" class="sortable num">Impressions</th>
+                    <th data-col="clicks"      class="sortable num">Clicks</th>
+                  </tr>
+                </thead>
+                <tbody id="dataTableBody"></tbody>
+              </table>
+            </div>
+            <div id="cardView" class="card-grid hidden"></div>
+            <div id="chartView" class="chart-wrap hidden"><canvas id="adChart"></canvas></div>
           </div>
         </div>
       </div>
@@ -264,6 +282,7 @@
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
