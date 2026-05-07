@@ -11,8 +11,8 @@
 
   <!-- WAKE-UP BANNER -->
   <div class="wakeup-banner" id="wakeupBanner">
-    <span>⏱ First visit of the day? The server may take up to 30 seconds to wake up — just wait and the page will load.</span>
-    <button class="wakeup-close" onclick="document.getElementById('wakeupBanner').style.display='none';localStorage.setItem('wakeupDismissed','1')">✕</button>
+    <span>⏱ <strong>First visit of the day?</strong> The server takes up to 30 seconds to wake up. If you saw a Render loading page, wait a moment then <a href="" class="wakeup-refresh">click here to refresh</a> — everything will load normally after that.</span>
+    <button class="wakeup-close" id="wakeupClose">✕</button>
   </div>
 
   <!-- TOPBAR -->

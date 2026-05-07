@@ -13,7 +13,7 @@ function displayKey(key) {
   if (localStorage.getItem('wakeupDismissed') === today) {
     banner.style.display = 'none';
   } else {
-    banner.querySelector('.wakeup-close').onclick = () => {
+    document.getElementById('wakeupClose').onclick = () => {
       banner.style.display = 'none';
       localStorage.setItem('wakeupDismissed', today);
     };

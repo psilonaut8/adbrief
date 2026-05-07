@@ -71,6 +71,8 @@ body {
   padding: 0 4px;
 }
 .wakeup-close:hover { opacity: 1; }
+.wakeup-refresh { color: #92400e; font-weight: 600; text-underline-offset: 2px; }
+.wakeup-refresh:hover { color: #78350f; }
 
 /* ── TOPBAR ───────────────────────────────────────────────────────────────── */
 .topbar {
