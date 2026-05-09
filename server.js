@@ -9,7 +9,7 @@ const { generateBrief } = require('./lib/brief');
 const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek } = require('./lib/storage');
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 function getClient(req) {
   const c = (req.body?.client || req.query?.client || '');

@@ -50,10 +50,10 @@
 
         <div id="tab-file">
           <label class="file-drop" id="fileDrop">
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.tsv,.ods,.numbers" multiple hidden />
+            <input type="file" id="fileInput" multiple hidden />
             <span class="drop-icon">📂</span>
             <span class="drop-main">Drop files or click to browse</span>
-            <span class="drop-sub">CSV, XLSX, XLS, ODS, TSV or Numbers</span>
+            <span class="drop-sub">Any spreadsheet or export file — drop as many as you like</span>
           </label>
         </div>
 
@@ -180,6 +180,7 @@
             <div class="empty-sub">Upload a Meta export on the Brief tab first.</div>
           </div>
           <div id="dataTableWrap" class="hidden">
+            <div class="data-summary" id="dataSummary"></div>
             <div class="data-toolbar">
               <div class="view-toggle">
                 <button class="view-btn active" data-view="table">≡ Table</button>

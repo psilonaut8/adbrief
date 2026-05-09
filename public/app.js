@@ -100,9 +100,10 @@ function setupFileUpload() {
 async function uploadFiles(files) {
   const arr = [...files];
   if (arr.length === 1) { await uploadFile(arr[0]); return; }
-  let totalAdded = 0, lastTotal = 0;
+
+  let totalAdded = 0, lastTotal = 0, skipped = 0;
   for (let i = 0; i < arr.length; i++) {
-    setStatus(`Uploading file ${i + 1} of ${arr.length}…`);
+    setStatus(`Uploading ${i + 1} of ${arr.length}…`);
     setDot('working', `Uploading ${i + 1}/${arr.length}…`);
     const form = new FormData();
     form.append('file', arr[i]);
@@ -110,22 +111,37 @@ async function uploadFiles(files) {
     try {
       const res = await fetch('/upload', { method: 'POST', body: form });
       const data = await res.json();
-      if (!res.ok) { setStatus(data.error, true); setDot('error', 'Upload failed'); return; }
+      if (!res.ok) {
+        skipped++;
+        console.warn(`[AdBrief] Skipped "${arr[i].name}": ${data.error}`);
+        continue; // skip this file, keep going
+      }
       currentWeekKey = data.weekKey;
-      totalAdded += data.added;
+      totalAdded += data.added || 0;
       lastTotal = data.total;
+      if (data.columns) {
+        console.log(`[AdBrief] ${arr[i].name} — columns:`, data.columns.fromFile);
+        if (data.columns.unrecognized.length) console.warn('[AdBrief] Unrecognized columns:', data.columns.unrecognized);
+      }
     } catch {
-      setStatus('Upload failed. Please try again.', true);
-      setDot('error', 'Upload failed');
-      return;
+      skipped++;
+      console.warn(`[AdBrief] Failed to upload "${arr[i].name}"`);
     }
   }
-  const msg = lastTotal > totalAdded ? `${totalAdded} ads added — ${lastTotal} total` : `${lastTotal} ads loaded`;
+
+  if (lastTotal === 0) {
+    setStatus('No ad rows found in any file. Check your export format.', true);
+    setDot('error', 'Upload failed');
+    return;
+  }
+
+  const skipNote = skipped ? ` (${skipped} file${skipped > 1 ? 's' : ''} skipped)` : '';
+  const msg = `${lastTotal} ads loaded from ${arr.length - skipped} file${arr.length - skipped !== 1 ? 's' : ''}${skipNote}`;
   setStatus(msg);
   setDot('ok', `${lastTotal} ads ready`);
   document.getElementById('generateBtn').disabled = false;
   document.getElementById('clearBtn').style.display = 'block';
-  document.querySelector('.drop-main').textContent = `${arr.length} files loaded`;
+  document.querySelector('.drop-main').textContent = `${arr.length - skipped} of ${arr.length} files loaded`;
 }
 
 async function uploadFile(file) {
@@ -533,8 +549,36 @@ async function loadDataTab() {
       setupCardSort();
       dataTabInitialized = true;
     }
+    renderDataSummary();
     renderCurrentDataView();
   } catch { /* silent */ }
+}
+
+function renderDataSummary() {
+  const el = document.getElementById('dataSummary');
+  if (!el || !dataAds.length) { if (el) el.innerHTML = ''; return; }
+
+  const totalSpend = dataAds.reduce((s, a) => s + (a.spend || 0), 0);
+  const ctrAds = dataAds.filter(a => a.ctr != null);
+  const avgCtr = ctrAds.length ? ctrAds.reduce((s, a) => s + a.ctr, 0) / ctrAds.length : null;
+  const cpmAds = dataAds.filter(a => a.cpm != null);
+  const avgCpm = cpmAds.length ? cpmAds.reduce((s, a) => s + a.cpm, 0) / cpmAds.length : null;
+  const roasAds = dataAds.filter(a => a.roas != null);
+  const avgRoas = roasAds.length ? roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length : null;
+  const topAd = [...dataAds].sort((a, b) => (b.spend || 0) - (a.spend || 0))[0];
+
+  const stat = (label, val) => val != null
+    ? `<div class="ds-stat"><span class="ds-label">${label}</span><span class="ds-val">${val}</span></div>`
+    : '';
+
+  el.innerHTML = [
+    stat('Total Spend', '$' + totalSpend.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })),
+    stat('Ads', dataAds.length),
+    avgRoas != null ? stat('Avg ROAS', avgRoas.toFixed(2)) : '',
+    avgCtr  != null ? stat('Avg CTR',  avgCtr.toFixed(2) + '%') : '',
+    avgCpm  != null ? stat('Avg CPM',  '$' + avgCpm.toFixed(2)) : '',
+    topAd ? `<div class="ds-stat ds-top"><span class="ds-label">Top Ad</span><span class="ds-val ds-topname" title="${esc(topAd.adName)}">${esc(topAd.adName.length > 32 ? topAd.adName.slice(0, 32) + '…' : topAd.adName)}</span></div>` : '',
+  ].join('');
 }
 
 function renderCurrentDataView() {
