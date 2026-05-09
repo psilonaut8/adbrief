@@ -139,6 +139,10 @@ async function uploadFile(file) {
     const data = await res.json();
     if (!res.ok) { setStatus(data.error, true); setDot('error', 'Upload failed'); return; }
     currentWeekKey = data.weekKey;
+    if (data.columns) {
+      console.log('[AdBrief] Columns detected from file:', data.columns.fromFile);
+      if (data.columns.unrecognized.length) console.warn('[AdBrief] Unrecognized columns (ignored):', data.columns.unrecognized);
+    }
     const msg = data.total > data.added
       ? `${data.added} ads added — ${data.total} total`
       : `${data.added} ads loaded`;
@@ -613,10 +617,36 @@ function roasColor(val) {
 function renderChartView() {
   const dark = document.documentElement.dataset.theme === 'dark';
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  // Auto-fallback: if selected metric has no data, find one that does
+  const METRIC_ORDER = ['spend', 'clicks', 'impressions', 'ctr', 'cpm', 'cpc', 'roas'];
+  const hasData = m => dataAds.some(a => a[m] != null && !isNaN(parseFloat(a[m])));
+  if (!hasData(chartMetric)) {
+    const fallback = METRIC_ORDER.find(hasData);
+    if (fallback) {
+      chartMetric = fallback;
+      document.querySelectorAll('[data-metric]').forEach(b => b.classList.toggle('active', b.dataset.metric === chartMetric));
+    }
+  }
+
   const sorted = [...dataAds]
     .filter(a => !isNaN(parseFloat(a[chartMetric])))
     .sort((a, b) => (parseFloat(b[chartMetric]) || 0) - (parseFloat(a[chartMetric]) || 0))
     .slice(0, 25);
+
+  const chartWrap = document.getElementById('chartView');
+
+  if (sorted.length === 0) {
+    chartWrap.style.height = '200px';
+    chartWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:14px;">No data available for this metric</div>';
+    return;
+  }
+
+  // Restore canvas if it was replaced by the no-data message
+  if (!document.getElementById('adChart')) {
+    chartWrap.innerHTML = '<canvas id="adChart"></canvas>';
+  }
+
   const labels = sorted.map(a => { const n = a.adName || '—'; return n.length > 38 ? n.slice(0, 38) + '…' : n; });
   const values = sorted.map(a => parseFloat(a[chartMetric]) || 0);
   const colors = sorted.map(a => {
@@ -626,7 +656,6 @@ function renderChartView() {
     }
     return '#1B6EF3';
   });
-  const chartWrap = document.getElementById('chartView');
   chartWrap.style.height = Math.max(320, sorted.length * 38 + 40) + 'px';
   chartInstance = new Chart(document.getElementById('adChart'), {
     type: 'bar',

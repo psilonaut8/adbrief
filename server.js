@@ -26,7 +26,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const ads = parseBuffer(req.file.buffer, req.file.mimetype);
+    const parsed = parseBuffer(req.file.buffer, req.file.mimetype);
+    const ads = parsed.ads ?? parsed; // backwards compat if shape changes
     if (!ads.length) return res.status(400).json({ error: 'No ad rows found. Check that your export has the correct columns.' });
 
     const weekKey = clientKey(getClient(req), getWeekKey());
@@ -38,7 +39,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     existing.uploadedAt = new Date().toISOString();
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, added: ads.length - (ads.length - (merged.length - prev.length)), total: merged.length });
+    res.json({ ok: true, weekKey, added: merged.length - prev.length, total: merged.length, columns: parsed.columns || null });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: err.message });
@@ -55,7 +56,8 @@ app.post('/sheets', async (req, res) => {
     if (!response.ok) return res.status(400).json({ error: 'Could not fetch that URL. Make sure the sheet is published.' });
 
     const text = await response.text();
-    const ads = parseCSVText(text);
+    const parsed = parseCSVText(text);
+    const ads = parsed.ads ?? parsed;
     if (!ads.length) return res.status(400).json({ error: 'No ad rows found in the sheet. Check column names.' });
 
     const weekKey = clientKey(getClient(req), getWeekKey());
@@ -67,7 +69,7 @@ app.post('/sheets', async (req, res) => {
     existing.uploadedAt = new Date().toISOString();
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, added: merged.length - prev.length, total: merged.length });
+    res.json({ ok: true, weekKey, added: merged.length - prev.length, total: merged.length, columns: parsed.columns || null });
   } catch (err) {
     console.error('Sheets error:', err);
     res.status(500).json({ error: err.message });
