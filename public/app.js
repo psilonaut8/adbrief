@@ -554,8 +554,10 @@ async function loadDataTab() {
     }
     dataAds = data.week.ads;
     document.getElementById('dataWeekLabel').textContent = displayKey(data.weekKey) + ' · ' + dataAds.length + ' ads';
-    const hasDate = dataAds.some(a => a.dateStart || a.dateCreated);
-    document.getElementById('thDate').style.display = hasDate ? '' : 'none';
+    const hasDate   = dataAds.some(a => a.dateStart || a.dateCreated);
+    const hasStatus = dataAds.some(a => a.adStatus);
+    document.getElementById('thDate').style.display   = hasDate   ? '' : 'none';
+    document.getElementById('thStatus').style.display = hasStatus ? '' : 'none';
     hide('dataEmpty');
     document.getElementById('dataTableWrap').classList.remove('hidden');
     if (!dataTabInitialized) {
@@ -633,7 +635,7 @@ function renderCardView() {
   document.getElementById('cardView').innerHTML = ads.map((ad, i) => `
     <div class="ad-data-card" data-adidx="${i}" style="cursor:pointer">
       ${ad.imageUrl ? `<div class="adc-thumb"><img src="${esc(ad.imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
-      <div class="adc-top">${formatBadge(ad.format)}</div>
+      <div class="adc-top">${formatBadge(ad.format)}${ad.adStatus ? statusBadge(ad.adStatus) : ''}</div>
       <div class="adc-name">${esc(ad.adName || '—')}</div>
       <div class="adc-metrics">
         <div class="adc-metric">
@@ -778,6 +780,24 @@ function formatIcon(raw) {
   return '';
 }
 
+function statusBadge(raw) {
+  if (!raw) return '';
+  const s = raw.toLowerCase();
+  if (s.includes('active') && !s.includes('in') && !s.includes('not'))
+    return `<span class="status-badge-pill status-active">Active</span>`;
+  if (s.includes('paused'))
+    return `<span class="status-badge-pill status-paused">Paused</span>`;
+  if (s.includes('not deliver') || s.includes('not delivered'))
+    return `<span class="status-badge-pill status-undelivered">Not delivered</span>`;
+  if (s.includes('learning limited'))
+    return `<span class="status-badge-pill status-learning">Learning limited</span>`;
+  if (s.includes('learning'))
+    return `<span class="status-badge-pill status-learning">Learning</span>`;
+  if (s.includes('inactive') || s.includes('archived') || s.includes('draft'))
+    return `<span class="status-badge-pill status-inactive">${esc(raw)}</span>`;
+  return `<span class="status-badge-pill status-inactive">${esc(raw)}</span>`;
+}
+
 function formatBadge(raw) {
   const f = (raw || '').toLowerCase();
   if (f.includes('video'))    return '<span class="fmt-badge fmt-video">▶ Video</span>';
@@ -810,11 +830,13 @@ function renderDataTable() {
     });
   }
 
-  const showDate = document.getElementById('thDate').style.display !== 'none';
+  const showDate   = document.getElementById('thDate').style.display   !== 'none';
+  const showStatus = document.getElementById('thStatus').style.display !== 'none';
   document.getElementById('dataTableBody').innerHTML = rows.map(ad => `
     <tr>
       <td class="ad-name-cell">${esc(ad.adName || '—')}</td>
-      ${showDate ? `<td class="date-cell">${esc(ad.dateCreated || ad.dateStart || '—')}</td>` : ''}
+      ${showDate   ? `<td class="date-cell">${esc(ad.dateCreated || ad.dateStart || '—')}</td>` : ''}
+      ${showStatus ? `<td>${statusBadge(ad.adStatus)}</td>` : ''}
       <td>${formatBadge(ad.format)}</td>
       <td class="num">${fmtNum(ad.spend, '$')}</td>
       <td class="num">${fmtNum(ad.roas)}</td>
@@ -971,7 +993,7 @@ function openAdModal(ad) {
   }
 
   // Format badge + name
-  document.getElementById('adModalTop').innerHTML = formatBadge(ad.format);
+  document.getElementById('adModalTop').innerHTML = formatBadge(ad.format) + (ad.adStatus ? statusBadge(ad.adStatus) : '');
   document.getElementById('adModalName').textContent = ad.adName || '—';
 
   // All metrics

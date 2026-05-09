@@ -1160,6 +1160,28 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   flex-shrink: 0;
 }
 
+/* ── STATUS BADGES ────────────────────────────────────────────────────────── */
+.status-badge-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+.status-active      { background: #edfaf1; color: #1a7a35; }
+.status-paused      { background: var(--surface3); color: var(--label3); }
+.status-undelivered { background: var(--orange-lt); color: #8a4e00; }
+.status-learning    { background: var(--blue-lt); color: var(--accent); }
+.status-inactive    { background: var(--surface3); color: var(--label4); }
+
+[data-theme="dark"] .status-active      { background: rgba(52,199,89,0.15);  color: #4ade80; }
+[data-theme="dark"] .status-paused      { background: rgba(255,255,255,0.08); color: var(--label3); }
+[data-theme="dark"] .status-undelivered { background: rgba(255,149,0,0.15);  color: #fbbf24; }
+[data-theme="dark"] .status-learning    { background: rgba(27,110,243,0.18); color: #60a5fa; }
+[data-theme="dark"] .status-inactive    { background: rgba(255,255,255,0.05); color: var(--label4); }
+
 /* ── FORMAT BADGES ────────────────────────────────────────────────────────── */
 .fmt-badge {
   display: inline-block;
