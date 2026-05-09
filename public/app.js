@@ -41,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDarkToggle();
   setupBriefViewToggle();
   setupAdModal();
+  setupContextUpload();
   loadCurrentWeek();
+  loadContextDocs();
 });
 
 // ── TOP TABS ───────────────────────────────────────────────────────────────
@@ -1030,4 +1032,83 @@ function formatTime(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' · ' +
     d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── CONTEXT FILES ──────────────────────────────────────────────────────────────
+function setupContextUpload() {
+  const input = document.getElementById('ctxInput');
+  const drop  = document.getElementById('ctxDrop');
+
+  input.addEventListener('change', () => { if (input.files.length) uploadContextFiles(input.files); });
+
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('dragover');
+    if (e.dataTransfer.files.length) uploadContextFiles(e.dataTransfer.files);
+  });
+}
+
+async function uploadContextFiles(files) {
+  const arr = [...files];
+  const statusEl = document.getElementById('ctxStatus');
+  statusEl.textContent = `Uploading ${arr.length} file${arr.length > 1 ? 's' : ''}…`;
+  statusEl.className = 'ctx-status';
+
+  let ok = 0, failed = [];
+  for (const file of arr) {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('client', CLIENT);
+    try {
+      const res = await fetch('/context', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) { failed.push(file.name); console.warn('[AdBrief] Context upload failed:', data.error); }
+      else ok++;
+    } catch {
+      failed.push(file.name);
+    }
+  }
+
+  if (failed.length) {
+    statusEl.textContent = `${ok} uploaded${failed.length ? `, ${failed.length} failed` : ''}`;
+    statusEl.className = 'ctx-status ctx-error';
+  } else {
+    statusEl.textContent = `${ok} file${ok > 1 ? 's' : ''} added`;
+    statusEl.className = 'ctx-status ctx-ok';
+  }
+  document.getElementById('ctxInput').value = '';
+  loadContextDocs();
+}
+
+async function loadContextDocs() {
+  try {
+    const res = await fetch('/context?client=' + CLIENT);
+    const data = await res.json();
+    renderContextList(data.docs || []);
+  } catch { /* silent */ }
+}
+
+function renderContextList(docs) {
+  const list = document.getElementById('ctxList');
+  if (!docs.length) { list.innerHTML = '<div class="ctx-empty">No context files yet</div>'; return; }
+  list.innerHTML = docs.map(d => `
+    <div class="ctx-item">
+      <div class="ctx-item-info">
+        <span class="ctx-item-name" title="${esc(d.name)}">${esc(d.name)}</span>
+        <span class="ctx-item-meta">${(d.chars / 1000).toFixed(1)}k chars · ${formatTime(d.updatedAt)}</span>
+      </div>
+      <button class="ctx-delete" data-name="${esc(d.name)}" title="Remove">✕</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.ctx-delete').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const name = btn.dataset.name;
+      if (!confirm(`Remove "${name}" from context?`)) return;
+      await fetch(`/context/${encodeURIComponent(name)}?client=${CLIENT}`, { method: 'DELETE' });
+      loadContextDocs();
+    });
+  });
 }

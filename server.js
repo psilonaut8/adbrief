@@ -6,7 +6,8 @@ const path = require('path');
 
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek } = require('./lib/storage');
+const { parseContextFile } = require('./lib/context-parser');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc } = require('./lib/storage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
@@ -96,7 +97,11 @@ app.post('/generate-brief', async (req, res) => {
     }
 
     const historySummary = await getRecentHistory(weekKey, 4);
-    const result = await generateBrief(week.ads, historySummary);
+    const contextDocs = await loadContextDocs(getClient(req));
+    const contextText = contextDocs.length
+      ? contextDocs.map(d => `--- ${d.name} ---\n${d.text}`).join('\n\n')
+      : null;
+    const result = await generateBrief(week.ads, historySummary, contextText);
 
     if (!result.ok) {
       return res.status(500).json({ error: 'AI response could not be parsed.', raw: result.raw });
@@ -246,6 +251,52 @@ app.post('/reaction', async (req, res) => {
     comments[index].reactions[emoji] = Math.max(0, (comments[index].reactions[emoji] || 0) + delta);
     await saveComments(weekKey, comments);
     res.json({ ok: true, comments });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── CONTEXT DOCS ──────────────────────────────────────────────────────────────
+
+// Upload a context file (ICP, brand brief, company info, etc.)
+app.post('/context', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const client = getClient(req);
+    const filename = req.file.originalname || 'context';
+    let text;
+    try {
+      text = await parseContextFile(req.file.buffer, filename, req.file.mimetype);
+    } catch (e) {
+      return res.status(400).json({ error: e.message });
+    }
+    if (!text) return res.status(400).json({ error: 'File appears to be empty.' });
+    // Use filename (without extension) as the doc name
+    const name = filename.replace(/\.[^.]+$/, '');
+    await saveContextDoc(client, name, text);
+    res.json({ ok: true, name, chars: text.length });
+  } catch (err) {
+    console.error('Context upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List context docs for this client
+app.get('/context', async (req, res) => {
+  try {
+    const docs = await loadContextDocs(getClient(req));
+    // Return name, char count, date — not full text (can be large)
+    res.json({ ok: true, docs: docs.map(d => ({ name: d.name, chars: d.text.length, updatedAt: d.updatedAt })) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a context doc
+app.delete('/context/:name', async (req, res) => {
+  try {
+    await deleteContextDoc(getClient(req), decodeURIComponent(req.params.name));
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
