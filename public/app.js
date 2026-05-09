@@ -706,12 +706,7 @@ function renderChartView() {
     chartWrap.innerHTML = '<canvas id="adChart"></canvas>';
   }
 
-  const labels = sorted.map(a => {
-    const icon = formatIcon(a.format);
-    const n = a.adName || '—';
-    const maxLen = icon ? 34 : 38;
-    return icon + (n.length > maxLen ? n.slice(0, maxLen) + '…' : n);
-  });
+  const labels = sorted.map(a => { const n = a.adName || '—'; return n.length > 38 ? n.slice(0, 38) + '…' : n; });
   const values = sorted.map(a => parseFloat(a[chartMetric]) || 0);
   const colors = sorted.map(a => {
     if (chartMetric === 'roas') {
