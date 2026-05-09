@@ -1038,6 +1038,7 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   grid-template-columns: 1fr 1fr;
   gap: 6px;
 }
+.adc-metric-wide { grid-column: 1 / -1; }
 
 .adc-metric {
   background: var(--surface2);

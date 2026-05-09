@@ -554,10 +554,12 @@ async function loadDataTab() {
     }
     dataAds = data.week.ads;
     document.getElementById('dataWeekLabel').textContent = displayKey(data.weekKey) + ' · ' + dataAds.length + ' ads';
-    const hasDate   = dataAds.some(a => a.dateStart || a.dateCreated);
-    const hasStatus = dataAds.some(a => a.adStatus);
-    document.getElementById('thDate').style.display   = hasDate   ? '' : 'none';
-    document.getElementById('thStatus').style.display = hasStatus ? '' : 'none';
+    const hasDate    = dataAds.some(a => a.dateStart || a.dateCreated);
+    const hasStatus  = dataAds.some(a => a.adStatus);
+    const hasResults = dataAds.some(a => a.results != null);
+    document.getElementById('thDate').style.display    = hasDate    ? '' : 'none';
+    document.getElementById('thStatus').style.display  = hasStatus  ? '' : 'none';
+    document.getElementById('thResults').style.display = hasResults ? '' : 'none';
     hide('dataEmpty');
     document.getElementById('dataTableWrap').classList.remove('hidden');
     if (!dataTabInitialized) {
@@ -582,6 +584,9 @@ function renderDataSummary() {
   const avgCpm = cpmAds.length ? cpmAds.reduce((s, a) => s + a.cpm, 0) / cpmAds.length : null;
   const roasAds = dataAds.filter(a => a.roas != null);
   const avgRoas = roasAds.length ? roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length : null;
+  const resultsAds = dataAds.filter(a => a.results != null);
+  const totalResults = resultsAds.length ? resultsAds.reduce((s, a) => s + a.results, 0) : null;
+  const resultLabel = resultsAds.length && resultsAds[0].resultType ? resultsAds[0].resultType : 'Results';
   const topAd = [...dataAds].sort((a, b) => (b.spend || 0) - (a.spend || 0))[0];
 
   const stat = (label, val) => val != null
@@ -591,6 +596,7 @@ function renderDataSummary() {
   el.innerHTML = [
     stat('Total Spend', '$' + totalSpend.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })),
     stat('Ads', dataAds.length),
+    totalResults != null ? stat(resultLabel, Math.round(totalResults).toLocaleString()) : '',
     avgRoas != null ? stat('Avg ROAS', avgRoas.toFixed(2)) : '',
     avgCtr  != null ? stat('Avg CTR',  avgCtr.toFixed(2) + '%') : '',
     avgCpm  != null ? stat('Avg CPM',  '$' + avgCpm.toFixed(2)) : '',
@@ -638,6 +644,10 @@ function renderCardView() {
       <div class="adc-top">${formatBadge(ad.format)}${ad.adStatus ? statusBadge(ad.adStatus) : ''}</div>
       <div class="adc-name">${esc(ad.adName || '—')}</div>
       <div class="adc-metrics">
+        ${ad.results != null ? `<div class="adc-metric adc-metric-wide">
+          <span class="adc-label">${esc(ad.resultType || 'Results')}</span>
+          <span class="adc-value">${Math.round(ad.results).toLocaleString()}</span>
+        </div>` : ''}
         <div class="adc-metric">
           <span class="adc-label">ROAS</span>
           <span class="adc-value ${roasColor(ad.roas)}">${fmtNum(ad.roas)}</span>
@@ -830,13 +840,15 @@ function renderDataTable() {
     });
   }
 
-  const showDate   = document.getElementById('thDate').style.display   !== 'none';
-  const showStatus = document.getElementById('thStatus').style.display !== 'none';
+  const showDate    = document.getElementById('thDate').style.display    !== 'none';
+  const showStatus  = document.getElementById('thStatus').style.display  !== 'none';
+  const showResults = document.getElementById('thResults').style.display !== 'none';
   document.getElementById('dataTableBody').innerHTML = rows.map(ad => `
     <tr>
       <td class="ad-name-cell">${esc(ad.adName || '—')}</td>
-      ${showDate   ? `<td class="date-cell">${esc(ad.dateCreated || ad.dateStart || '—')}</td>` : ''}
-      ${showStatus ? `<td>${statusBadge(ad.adStatus)}</td>` : ''}
+      ${showDate    ? `<td class="date-cell">${esc(ad.dateCreated || ad.dateStart || '—')}</td>` : ''}
+      ${showStatus  ? `<td>${statusBadge(ad.adStatus)}</td>` : ''}
+      ${showResults ? `<td class="num">${esc(fmtResults(ad))}</td>` : ''}
       <td>${formatBadge(ad.format)}</td>
       <td class="num">${fmtNum(ad.spend, '$')}</td>
       <td class="num">${fmtNum(ad.roas)}</td>
@@ -868,6 +880,12 @@ function setupDataSort() {
       renderDataTable();
     });
   });
+}
+
+function fmtResults(ad) {
+  if (ad.results == null) return '—';
+  const n = Math.round(ad.results).toLocaleString();
+  return ad.resultType ? `${n} ${ad.resultType}` : n;
 }
 
 function fmtNum(val, prefix) {
@@ -998,6 +1016,7 @@ function openAdModal(ad) {
 
   // All metrics
   const metrics = [
+    ad.results != null ? { label: ad.resultType || 'Results', value: Math.round(ad.results).toLocaleString(), cls: '' } : null,
     { label: 'ROAS',        value: fmtNum(ad.roas),              cls: roasColor(ad.roas) },
     { label: 'Spend',       value: fmtNum(ad.spend, '$'),         cls: '' },
     { label: 'CTR',         value: fmtPct(ad.ctr),               cls: '' },
@@ -1007,7 +1026,7 @@ function openAdModal(ad) {
     { label: 'Impressions', value: fmtInt(ad.impressions),        cls: '' },
     { label: 'Reach',       value: fmtInt(ad.reach),              cls: '' },
     { label: 'Frequency',   value: ad.frequency != null ? parseFloat(ad.frequency).toFixed(2) : '—', cls: '' },
-  ];
+  ].filter(Boolean);
   document.getElementById('adModalMetrics').innerHTML = metrics.map(m => `
     <div class="ad-modal-metric">
       <span class="adc-label">${m.label}</span>
