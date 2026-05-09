@@ -270,9 +270,19 @@ function renderBrief(brief, weekKey, existingComments) {
   currentWeekKey = weekKey;
   document.getElementById('briefTitle').textContent = `Creative Brief — ${displayKey(weekKey)}`;
   document.getElementById('briefMeta').textContent = 'Generated from your Meta Ads export';
-  document.getElementById('briefSummary').textContent = brief.summary || '';
+
+  // Summary — array of bullets (new) or legacy string
+  const summaryEl = document.getElementById('briefSummary');
+  if (Array.isArray(brief.summary)) {
+    summaryEl.innerHTML = brief.summary.map(s => `<li>${esc(s)}</li>`).join('');
+    summaryEl.className = 'summary-bullets';
+  } else {
+    summaryEl.textContent = brief.summary || '';
+    summaryEl.className = 'summary-text';
+  }
 
   renderAdList('topPerformers', brief.topPerformers, 'green', a => `
+    ${a.metric ? `<span class="ad-metric">${esc(a.metric)}</span>` : ''}
     <div class="ad-name">${esc(a.adName)}</div>
     <div class="ad-why">${esc(a.why)}</div>
     <span class="ad-action">${esc(a.action)}</span>
@@ -282,16 +292,19 @@ function renderBrief(brief, weekKey, existingComments) {
     <div class="ad-why">${esc(a.rationale)}</div>
   `);
   renderAdList('fatigueAlerts', brief.fatigueAlerts, 'orange', a => `
+    ${a.metric ? `<span class="ad-metric">${esc(a.metric)}</span>` : ''}
     <div class="ad-name">${esc(a.adName)}</div>
     <div class="ad-why">${esc(a.why)}</div>
     <span class="ad-action">${esc(a.action)}</span>
   `);
   renderAdList('underperformers', brief.underperformers, 'orange', a => `
+    ${a.metric ? `<span class="ad-metric">${esc(a.metric)}</span>` : ''}
     <div class="ad-name">${esc(a.adName)}</div>
     <div class="ad-why">${esc(a.why)}</div>
     <span class="ad-action">${esc(a.action)}</span>
   `);
   renderAdList('retireNow', brief.retireNow, 'red', a => `
+    ${a.metric ? `<span class="ad-metric">${esc(a.metric)}</span>` : ''}
     <div class="ad-name">${esc(a.adName)}</div>
     <div class="ad-why">${esc(a.reason)}</div>
   `);
@@ -693,7 +706,12 @@ function renderChartView() {
     chartWrap.innerHTML = '<canvas id="adChart"></canvas>';
   }
 
-  const labels = sorted.map(a => { const n = a.adName || '—'; return n.length > 38 ? n.slice(0, 38) + '…' : n; });
+  const labels = sorted.map(a => {
+    const icon = formatIcon(a.format);
+    const n = a.adName || '—';
+    const maxLen = icon ? 34 : 38;
+    return icon + (n.length > maxLen ? n.slice(0, maxLen) + '…' : n);
+  });
   const values = sorted.map(a => parseFloat(a[chartMetric]) || 0);
   const colors = sorted.map(a => {
     if (chartMetric === 'roas') {
@@ -726,6 +744,15 @@ function renderChartView() {
       }
     }
   });
+}
+
+function formatIcon(raw) {
+  const f = (raw || '').toLowerCase();
+  if (f.includes('video') || f.includes('reel')) return '▶ ';
+  if (f.includes('carousel'))                    return '≡ ';
+  if (f.includes('story') || f.includes('stories') || f.includes('vertical')) return '▌ ';
+  if (f.includes('image') || f.includes('photo') || f.includes('static'))     return '◼ ';
+  return '';
 }
 
 function formatBadge(raw) {
