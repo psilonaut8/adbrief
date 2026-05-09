@@ -834,6 +834,7 @@ function renderTrendsChart() {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => {
           const v = ctx.raw;
+          if (v == null) return ' No data';
           if (trendsMetric === 'spend') return ` $${v.toLocaleString()}`;
           if (trendsMetric === 'ctr') return ` ${v.toFixed(2)}%`;
           return ` ${v.toFixed(2)}`;
