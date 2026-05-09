@@ -1139,6 +1139,27 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .chart-wrap { padding: 16px; position: relative; min-height: 320px; }
 .chart-wrap canvas { width: 100% !important; }
 
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 0 0 12px;
+}
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--label3);
+}
+.chart-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
 /* ── FORMAT BADGES ────────────────────────────────────────────────────────── */
 .fmt-badge {
   display: inline-block;

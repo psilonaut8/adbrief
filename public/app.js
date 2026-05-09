@@ -697,25 +697,34 @@ function renderChartView() {
 
   if (sorted.length === 0) {
     chartWrap.style.height = '200px';
-    chartWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:14px;">No data available for this metric</div>';
+    chartWrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--label3);font-size:14px;">No data available for this metric</div>';
     return;
   }
 
-  // Restore canvas if it was replaced by the no-data message
+  // Restore canvas + legend if replaced by the no-data message
   if (!document.getElementById('adChart')) {
-    chartWrap.innerHTML = '<canvas id="adChart"></canvas>';
+    chartWrap.innerHTML = '<div class="chart-legend" id="adChartLegend"></div><canvas id="adChart"></canvas>';
   }
 
   const labels = sorted.map(a => { const n = a.adName || '—'; return n.length > 38 ? n.slice(0, 38) + '…' : n; });
   const values = sorted.map(a => parseFloat(a[chartMetric]) || 0);
-  const colors = sorted.map(a => {
-    if (chartMetric === 'roas') {
-      const r = parseFloat(a.roas);
-      return r >= 3 ? '#34C759' : r >= 1.5 ? '#FF9500' : '#FF3B30';
-    }
-    return '#1B6EF3';
+  const colors = sorted.map(a => FORMAT_PALETTE[adFormatKey(a.format)].bg);
+
+  // Legend — only show formats that appear in this data set
+  const seen = new Set();
+  const legendItems = [];
+  sorted.forEach(a => {
+    const key = adFormatKey(a.format);
+    if (!seen.has(key)) { seen.add(key); legendItems.push({ key, ...FORMAT_PALETTE[key] }); }
   });
-  chartWrap.style.height = Math.max(320, sorted.length * 38 + 40) + 'px';
+  const legendEl = document.getElementById('adChartLegend');
+  if (legendEl) {
+    legendEl.innerHTML = legendItems.map(item =>
+      `<span class="chart-legend-item"><span class="chart-legend-dot" style="background:${item.bg}"></span>${item.label}</span>`
+    ).join('');
+  }
+
+  chartWrap.style.height = Math.max(320, sorted.length * 38 + 76) + 'px';
   chartInstance = new Chart(document.getElementById('adChart'), {
     type: 'bar',
     data: { labels, datasets: [{ data: values, backgroundColor: colors, borderRadius: 4, borderSkipped: false }] },
@@ -727,10 +736,12 @@ function renderChartView() {
         legend: { display: false },
         tooltip: { callbacks: { label: ctx => {
           const v = ctx.raw;
-          if (['spend','cpc','cpm'].includes(chartMetric)) return ` $${v.toFixed(2)}`;
-          if (chartMetric === 'ctr') return ` ${v.toFixed(2)}%`;
-          if (['impressions','clicks'].includes(chartMetric)) return ` ${Math.round(v).toLocaleString()}`;
-          return ` ${v.toFixed(2)}`;
+          const ad = sorted[ctx.dataIndex];
+          const fmt = ad?.format ? ` · ${ad.format}` : '';
+          if (['spend','cpc','cpm'].includes(chartMetric)) return ` $${v.toFixed(2)}${fmt}`;
+          if (chartMetric === 'ctr') return ` ${v.toFixed(2)}%${fmt}`;
+          if (['impressions','clicks'].includes(chartMetric)) return ` ${Math.round(v).toLocaleString()}${fmt}`;
+          return ` ${v.toFixed(2)}${fmt}`;
         }}}
       },
       scales: {
@@ -739,6 +750,23 @@ function renderChartView() {
       }
     }
   });
+}
+
+const FORMAT_PALETTE = {
+  video:    { bg: '#6366F1', label: 'Video' },
+  carousel: { bg: '#F59E0B', label: 'Carousel' },
+  image:    { bg: '#0EA5E9', label: 'Image' },
+  vertical: { bg: '#10B981', label: 'Story / Vertical' },
+  other:    { bg: '#8E8E93', label: 'Other' },
+};
+
+function adFormatKey(raw) {
+  const f = (raw || '').toLowerCase();
+  if (f.includes('video') || f.includes('reel'))                              return 'video';
+  if (f.includes('carousel'))                                                  return 'carousel';
+  if (f.includes('story') || f.includes('stories') || f.includes('vertical')) return 'vertical';
+  if (f.includes('image') || f.includes('photo') || f.includes('static'))     return 'image';
+  return 'other';
 }
 
 function formatIcon(raw) {
