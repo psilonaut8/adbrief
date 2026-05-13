@@ -491,6 +491,22 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   color: var(--label4);
   margin-top: 3px;
 }
+.data-week-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.week-select {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--label2);
+  cursor: pointer;
+  max-width: 180px;
+}
+.week-select:focus { outline: none; border-color: var(--accent); }
 
 /* ── BRIEF GRID ───────────────────────────────────────────────────────────── */
 .brief-grid {
