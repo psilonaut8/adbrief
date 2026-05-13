@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBriefViewToggle();
   setupAdModal();
   setupContextUpload();
+  setupMetaEnrich();
   loadCurrentWeek();
   loadContextDocs();
 });
@@ -1202,4 +1203,62 @@ function renderContextList(docs) {
       loadContextDocs();
     });
   });
+}
+
+// ── META API THUMBNAIL ENRICHMENT ──────────────────────────────────────────
+function setupMetaEnrich() {
+  const accountInput = document.getElementById('metaAccountId');
+  const tokenInput   = document.getElementById('metaToken');
+  const btn          = document.getElementById('metaEnrichBtn');
+  const status       = document.getElementById('metaStatus');
+
+  // Restore saved values (token stored as convenience — user can clear manually)
+  const savedAccount = localStorage.getItem('metaAccountId');
+  const savedToken   = localStorage.getItem('metaToken');
+  if (savedAccount) accountInput.value = savedAccount;
+  if (savedToken)   tokenInput.value   = savedToken;
+
+  btn.addEventListener('click', async () => {
+    const token     = tokenInput.value.trim();
+    const accountId = accountInput.value.trim();
+    if (!token)     { setMetaStatus('Enter your access token.', 'error'); return; }
+    if (!accountId) { setMetaStatus('Enter your Ad Account ID.', 'error'); return; }
+
+    // Persist for convenience
+    localStorage.setItem('metaAccountId', accountId);
+    localStorage.setItem('metaToken', token);
+
+    btn.disabled = true;
+    btn.textContent = 'Fetching…';
+    setMetaStatus('', '');
+
+    try {
+      const r = await fetch('/meta/enrich?client=' + CLIENT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, accountId }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        setMetaStatus(data.error || 'Something went wrong.', 'error');
+      } else if (data.enriched === 0) {
+        setMetaStatus(data.message || 'No ads matched. Upload your CSV first, then fetch.', 'warn');
+      } else {
+        setMetaStatus(`✓ Thumbnails added to ${data.enriched} of ${data.total} ads.`, 'ok');
+        // Refresh data tab if it's open
+        if (dataAds.length) loadDataTab();
+      }
+    } catch (e) {
+      setMetaStatus('Network error — check your connection.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Fetch thumbnails';
+    }
+  });
+
+  function setMetaStatus(msg, type) {
+    status.textContent = msg;
+    const cls = { ok: 'ctx-ok', error: 'ctx-error', warn: 'ctx-warn' };
+    status.className = 'ctx-status' + (type && cls[type] ? ' ' + cls[type] : '');
+  }
 }
