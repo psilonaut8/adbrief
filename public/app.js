@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBriefViewToggle();
   setupAdModal();
   setupContextUpload();
+  setupMetaEnrich();
   loadCurrentWeek();
   loadContextDocs();
 });
@@ -55,9 +56,9 @@ function setupTabs() {
       btn.classList.add('active');
       document.getElementById('panel-' + btn.dataset.panel).classList.add('active');
 
-      // Hide sidebar on how-to, data, and trends tabs
+      // Hide sidebar on how-to and trends tabs; keep it visible on data tab (Meta panel lives there)
       const sidebar = document.getElementById('sidebar');
-      if (btn.dataset.panel === 'howto' || btn.dataset.panel === 'data' || btn.dataset.panel === 'trends') {
+      if (btn.dataset.panel === 'howto' || btn.dataset.panel === 'trends') {
         sidebar.classList.add('hidden');
       } else {
         if (!isViewOnly) sidebar.classList.remove('hidden');
@@ -541,11 +542,26 @@ let dataView = 'table';
 let chartInstance = null;
 let chartMetric = 'roas';
 let dataTabInitialized = false;
+let dataWeekSelectInitialized = false;
 
-async function loadDataTab() {
+async function loadDataTab(weekKey) {
   try {
-    const res = await fetch('/week/current?client=' + CLIENT);
+    // Populate week picker on first load
+    if (!dataWeekSelectInitialized) {
+      await populateDataWeekSelect();
+      dataWeekSelectInitialized = true;
+    }
+
+    // Resolve which week to show
+    const url = weekKey ? `/week/${encodeURIComponent(weekKey)}` : `/week/current?client=${CLIENT}`;
+    const res  = await fetch(url);
     const data = await res.json();
+
+    // Sync the select to whichever week was loaded
+    const sel = document.getElementById('dataWeekSelect');
+    const resolvedKey = data.weekKey || weekKey;
+    if (sel && resolvedKey) sel.value = resolvedKey;
+
     if (!data.week?.ads?.length) {
       show('dataEmpty');
       document.getElementById('dataTableWrap').classList.add('hidden');
@@ -553,7 +569,7 @@ async function loadDataTab() {
       return;
     }
     dataAds = data.week.ads;
-    document.getElementById('dataWeekLabel').textContent = displayKey(data.weekKey) + ' · ' + dataAds.length + ' ads';
+    document.getElementById('dataWeekLabel').textContent = displayKey(resolvedKey) + ' · ' + dataAds.length + ' ads';
     const hasDate    = dataAds.some(a => a.dateStart || a.dateCreated);
     const hasStatus  = dataAds.some(a => a.adStatus);
     const hasResults = dataAds.some(a => a.results != null);
@@ -570,6 +586,22 @@ async function loadDataTab() {
     }
     renderDataSummary();
     renderCurrentDataView();
+  } catch { /* silent */ }
+}
+
+async function populateDataWeekSelect() {
+  const sel = document.getElementById('dataWeekSelect');
+  if (!sel) return;
+  try {
+    const res  = await fetch('/history?client=' + CLIENT);
+    const data = await res.json();
+    const weeks = (data.weeks || []).slice().sort().reverse(); // newest first
+    sel.innerHTML = weeks.length
+      ? weeks.map(w => `<option value="${w}">${displayKey(w)}</option>`).join('')
+      : '<option value="">No saved weeks</option>';
+    sel.addEventListener('change', () => {
+      if (sel.value) loadDataTab(sel.value);
+    });
   } catch { /* silent */ }
 }
 
@@ -1237,4 +1269,62 @@ function renderContextList(docs) {
       loadContextDocs();
     });
   });
+}
+
+// ── META API THUMBNAIL ENRICHMENT ──────────────────────────────────────────
+function setupMetaEnrich() {
+  const accountInput = document.getElementById('metaAccountId');
+  const tokenInput   = document.getElementById('metaToken');
+  const btn          = document.getElementById('metaEnrichBtn');
+  const status       = document.getElementById('metaStatus');
+
+  // Restore saved values (token stored as convenience — user can clear manually)
+  const savedAccount = localStorage.getItem('metaAccountId');
+  const savedToken   = localStorage.getItem('metaToken');
+  if (savedAccount) accountInput.value = savedAccount;
+  if (savedToken)   tokenInput.value   = savedToken;
+
+  btn.addEventListener('click', async () => {
+    const token     = tokenInput.value.trim();
+    const accountId = accountInput.value.trim();
+    if (!token)     { setMetaStatus('Enter your access token.', 'error'); return; }
+    if (!accountId) { setMetaStatus('Enter your Ad Account ID.', 'error'); return; }
+
+    // Persist for convenience
+    localStorage.setItem('metaAccountId', accountId);
+    localStorage.setItem('metaToken', token);
+
+    btn.disabled = true;
+    btn.textContent = 'Fetching…';
+    setMetaStatus('', '');
+
+    try {
+      const r = await fetch('/meta/enrich?client=' + CLIENT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, accountId }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        setMetaStatus(data.error || 'Something went wrong.', 'error');
+      } else if (data.enriched === 0) {
+        setMetaStatus(data.message || 'No ads matched. Upload your CSV first, then fetch.', 'warn');
+      } else {
+        setMetaStatus(`✓ Thumbnails added to ${data.enriched} of ${data.total} ads.`, 'ok');
+        // Refresh data tab if it's open
+        if (dataAds.length) loadDataTab();
+      }
+    } catch (e) {
+      setMetaStatus('Network error — check your connection.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Fetch thumbnails';
+    }
+  });
+
+  function setMetaStatus(msg, type) {
+    status.textContent = msg;
+    const cls = { ok: 'ctx-ok', error: 'ctx-error', warn: 'ctx-warn' };
+    status.className = 'ctx-status' + (type && cls[type] ? ' ' + cls[type] : '');
+  }
 }

@@ -302,5 +302,75 @@ app.delete('/context/:name', async (req, res) => {
   }
 });
 
+// ── META API ENRICHMENT ───────────────────────────────────────────────────────
+
+// Fetch all ads from a Meta Ads account and enrich stored ad records with thumbnail URLs.
+// The token is passed per-request (never stored server-side).
+// Matching: adId first (if the CSV export included an "Ad ID" column), then ad name.
+app.post('/meta/enrich', async (req, res) => {
+  try {
+    const { token, accountId } = req.body;
+    if (!token)     return res.status(400).json({ error: 'access_token is required' });
+    if (!accountId) return res.status(400).json({ error: 'accountId is required (e.g. act_123456789)' });
+
+    // Normalise account ID — accept with or without "act_" prefix
+    const actId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+
+    // Pull all ads with creative thumbnail/image URLs, handling pagination
+    const metaAds = [];
+    let url = `https://graph.facebook.com/v19.0/${actId}/ads`
+            + `?fields=id,name,creative{thumbnail_url,image_url}`
+            + `&limit=200`
+            + `&access_token=${encodeURIComponent(token)}`;
+
+    while (url) {
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (data.error) {
+        return res.status(400).json({ error: data.error.message || 'Meta API error', meta: data.error });
+      }
+      if (Array.isArray(data.data)) metaAds.push(...data.data);
+      url = data.paging?.next || null;
+    }
+
+    if (!metaAds.length) {
+      return res.json({ ok: true, enriched: 0, total: 0, message: 'No ads found in this account via the Meta API.' });
+    }
+
+    // Build lookup maps: by ID and by name (lowercased)
+    const byId   = {};
+    const byName = {};
+    for (const ma of metaAds) {
+      const thumb = ma.creative?.thumbnail_url || ma.creative?.image_url || null;
+      if (thumb) {
+        byId[String(ma.id)] = thumb;
+        byName[String(ma.name || '').toLowerCase()] = thumb;
+      }
+    }
+
+    // Load stored week, patch imageUrl on each ad
+    const weekKey = clientKey(getClient(req), getWeekKey());
+    const week    = await loadWeek(weekKey);
+    if (!week?.ads?.length) {
+      return res.json({ ok: true, enriched: 0, total: 0, message: 'No ads uploaded for this week yet.' });
+    }
+
+    let enriched = 0;
+    for (const ad of week.ads) {
+      const thumb =
+        (ad.adId   && byId[String(ad.adId)])   ||
+        (ad.adName && byName[ad.adName.toLowerCase()]) ||
+        null;
+      if (thumb) { ad.imageUrl = thumb; enriched++; }
+    }
+
+    await saveWeek(weekKey, week);
+    res.json({ ok: true, enriched, total: week.ads.length });
+  } catch (err) {
+    console.error('Meta enrich error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`AdBrief running on http://localhost:${PORT}`));

@@ -71,6 +71,15 @@
         <button class="btn-clear" id="clearBtn" style="display:none">✕ Clear all data</button>
       </div>
 
+      <div class="sgroup" id="metaPanel">
+        <div class="slabel">Meta thumbnails</div>
+        <div class="ctx-hint">Fetch ad creative thumbnails directly from the Meta API — no export URL needed.</div>
+        <input type="text" id="metaAccountId" class="input" placeholder="Ad Account ID (e.g. act_123…)" style="margin-bottom:6px" />
+        <input type="password" id="metaToken" class="input" placeholder="Access token" style="margin-bottom:8px" />
+        <button class="btn-outline" id="metaEnrichBtn" style="width:100%">Fetch thumbnails</button>
+        <div class="ctx-status" id="metaStatus"></div>
+      </div>
+
       <div class="sgroup" id="contextPanel">
         <div class="slabel">Context files</div>
         <div class="ctx-hint">ICP, brand brief, offer details — any file that helps the AI understand your business. Stays loaded week to week.</div>
@@ -184,7 +193,10 @@
       <div class="panel-view" id="panel-data">
         <div class="content-header">
           <h1>Ad Data</h1>
-          <div id="dataWeekLabel" class="content-meta"></div>
+          <div class="data-week-row">
+            <div id="dataWeekLabel" class="content-meta"></div>
+            <select id="dataWeekSelect" class="week-select" title="Load a different week"></select>
+          </div>
         </div>
         <div class="data-card" id="dataCard">
           <div class="empty-state" id="dataEmpty">
