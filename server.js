@@ -304,14 +304,23 @@ app.delete('/context/:name', async (req, res) => {
 
 // ── META API ENRICHMENT ───────────────────────────────────────────────────────
 
+// Tell the frontend which credentials are pre-configured via env vars
+app.get('/meta/config', (req, res) => {
+  res.json({
+    accountConfigured: !!process.env.META_ACCOUNT_ID,
+    tokenConfigured:   !!process.env.META_ACCESS_TOKEN,
+  });
+});
+
 // Fetch all ads from a Meta Ads account and enrich stored ad records with thumbnail URLs.
-// The token is passed per-request (never stored server-side).
+// Token and accountId can come from the request body (manual entry) or env vars (pre-configured).
 // Matching: adId first (if the CSV export included an "Ad ID" column), then ad name.
 app.post('/meta/enrich', async (req, res) => {
   try {
-    const { token, accountId } = req.body;
-    if (!token)     return res.status(400).json({ error: 'access_token is required' });
-    if (!accountId) return res.status(400).json({ error: 'accountId is required (e.g. act_123456789)' });
+    const token     = req.body.token     || process.env.META_ACCESS_TOKEN;
+    const accountId = req.body.accountId || process.env.META_ACCOUNT_ID;
+    if (!token)     return res.status(400).json({ error: 'No access token — add META_ACCESS_TOKEN to environment variables or enter it manually.' });
+    if (!accountId) return res.status(400).json({ error: 'No ad account ID — add META_ACCOUNT_ID to environment variables or enter it manually.' });
 
     // Normalise account ID — accept with or without "act_" prefix
     const actId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;

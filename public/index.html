@@ -73,9 +73,11 @@
 
       <div class="sgroup" id="metaPanel">
         <div class="slabel">Meta thumbnails</div>
-        <div class="ctx-hint">Fetch ad creative thumbnails directly from the Meta API — no export URL needed.</div>
-        <input type="text" id="metaAccountId" class="input" placeholder="Ad Account ID (e.g. act_123…)" style="margin-bottom:6px" />
-        <input type="password" id="metaToken" class="input" placeholder="Access token" style="margin-bottom:8px" />
+        <div id="metaFields">
+          <div class="ctx-hint">Fetch ad creative thumbnails directly from the Meta API.</div>
+          <input type="text" id="metaAccountId" class="input" placeholder="Ad Account ID (e.g. act_123…)" style="margin-bottom:6px" />
+          <input type="password" id="metaToken" class="input" placeholder="Access token" style="margin-bottom:8px" />
+        </div>
         <button class="btn-outline" id="metaEnrichBtn" style="width:100%">Fetch thumbnails</button>
         <div class="ctx-status" id="metaStatus"></div>
       </div>
