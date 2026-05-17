@@ -168,6 +168,90 @@ body {
 .tab:hover { color: var(--label); }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
+/* ── CLIENT SWITCHER ──────────────────────────────────────────────────────── */
+.client-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  position: relative;
+  margin-right: 4px;
+}
+
+.client-switcher-sep {
+  font-size: 18px;
+  color: var(--label4);
+  margin: 0 8px 0 6px;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.client-switcher-inner {
+  position: relative;
+}
+
+.client-switch-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: var(--surface3);
+  border: 1px solid var(--sep);
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.client-switch-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--blue-lt); }
+
+.client-switch-caret {
+  font-size: 10px;
+  color: var(--label3);
+  flex-shrink: 0;
+}
+
+.client-switch-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--sep);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  z-index: 300;
+  overflow: hidden;
+  padding: 4px;
+}
+.client-switch-dropdown.hidden { display: none; }
+
+.csw-item {
+  display: block;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label2);
+  text-decoration: none;
+  border-radius: var(--r-sm);
+  transition: background .12s, color .12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.csw-item:hover { background: var(--blue-lt); color: var(--accent); }
+.csw-item.csw-active { font-weight: 700; color: var(--accent); background: var(--blue-lt); }
+.csw-item.csw-home { color: var(--label3); font-size: 12px; }
+.csw-item.csw-home:hover { color: var(--accent); }
+
+.csw-divider { height: 1px; background: var(--sep2); margin: 4px 0; }
+.csw-loading { padding: 10px 12px; font-size: 12px; color: var(--label4); }
+
 /* ── DARK TOGGLE ──────────────────────────────────────────────────────────── */
 .dark-toggle {
   background: none;

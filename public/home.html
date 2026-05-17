@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AdBrief — Clients</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>if(localStorage.getItem('darkMode')==='1')document.documentElement.dataset.theme='dark'</script>
+  <style>
+    html, body { height: auto; min-height: 100vh; overflow: auto; display: block; }
+
+    /* ── topbar ── */
+    .home-topbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid var(--sep);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    [data-theme="dark"] .home-topbar { background: rgba(28,28,30,0.92); }
+
+    .home-brand {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--label);
+      text-decoration: none;
+    }
+    .home-brand em { color: var(--accent); font-style: normal; }
+
+    .home-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* ── page layout ── */
+    .home-wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 36px 24px 72px;
+    }
+
+    .home-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+    .home-hd h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--label);
+    }
+
+    /* ── client grid ── */
+    .client-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .client-card {
+      background: var(--surface);
+      border: 1px solid var(--sep2);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow .15s, border-color .15s, transform .12s;
+      position: relative;
+    }
+    .client-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(27,110,243,.3);
+      transform: translateY(-1px);
+    }
+
+    .client-card-name {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: var(--label);
+      line-height: 1.2;
+    }
+
+    .client-card-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .client-stat {
+      font-size: 12.5px;
+      color: var(--label3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .client-stat strong { color: var(--label2); font-weight: 600; }
+
+    .client-card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .cc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 100px;
+    }
+    .cc-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .cc-brief-ok   { background: var(--green-lt);  color: #1a7a35; }
+    .cc-brief-ok .cc-badge-dot   { background: var(--green); }
+    .cc-brief-none { background: var(--surface3); color: var(--label4); }
+    .cc-brief-none .cc-badge-dot { background: var(--label4); }
+    .cc-meta-ok    { background: var(--blue-lt);   color: var(--accent); }
+    .cc-meta-ok .cc-badge-dot    { background: var(--accent); }
+    .cc-meta-none  { background: var(--surface3); color: var(--label4); }
+    .cc-meta-none .cc-badge-dot  { background: var(--label4); }
+
+    [data-theme="dark"] .cc-brief-ok  { color: #4ade80; }
+    [data-theme="dark"] .cc-meta-ok   { color: #60a5fa; }
+
+    .client-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 4px;
+      border-top: 1px solid var(--sep2);
+    }
+    .client-open-btn {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .client-setup-link {
+      font-size: 11px;
+      color: var(--label4);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .client-setup-link:hover { color: var(--label3); text-decoration: underline; }
+
+    .client-delete-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--label4);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 3px 5px;
+      border-radius: 5px;
+      opacity: 0;
+      transition: opacity .15s, color .15s, background .15s;
+      line-height: 1;
+    }
+    .client-card:hover .client-delete-btn { opacity: 1; }
+    .client-delete-btn:hover { color: var(--red); background: var(--red-lt); }
+
+    /* ── add card ── */
+    .add-client-card {
+      background: var(--surface);
+      border: 1.5px dashed var(--sep);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      min-height: 160px;
+      color: var(--label4);
+      transition: border-color .15s, color .15s, background .15s;
+      text-align: center;
+    }
+    .add-client-card:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--blue-lt);
+    }
+    .add-client-icon { font-size: 28px; line-height: 1; }
+    .add-client-label { font-size: 13px; font-weight: 600; }
+
+    /* ── empty state ── */
+    .home-empty {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 64px 20px;
+      text-align: center;
+      gap: 10px;
+    }
+    .home-empty-icon  { font-size: 42px; opacity: .35; }
+    .home-empty-title { font-size: 16px; font-weight: 600; color: var(--label3); }
+    .home-empty-sub   { font-size: 13px; color: var(--label4); }
+
+    /* ── loading skeleton ── */
+    .skeleton-card {
+      background: var(--surface);
+      border: 1px solid var(--sep2);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 180px;
+    }
+    .skel {
+      background: var(--surface3);
+      border-radius: 6px;
+      animation: skel-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes skel-pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+    /* ── modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.hidden { display: none; }
+
+    .modal-box {
+      background: var(--surface);
+      border-radius: var(--r-lg);
+      box-shadow: 0 24px 64px rgba(0,0,0,.2);
+      padding: 28px;
+      width: 100%;
+      max-width: 400px;
+    }
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--label);
+      margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-size: 13px;
+      color: var(--label3);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .modal-actions .btn-primary { flex: 1; }
+    .modal-cancel {
+      padding: 10px 16px;
+      background: none;
+      border: 1.5px solid var(--sep);
+      border-radius: var(--r-md);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--label3);
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .modal-cancel:hover { border-color: var(--label4); color: var(--label); }
+
+    .modal-error {
+      font-size: 12px;
+      color: var(--red);
+      margin-top: 8px;
+      min-height: 16px;
+    }
+
+    /* ── created state ── */
+    .created-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .created-meta-link {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: none;
+      border: 1.5px solid var(--sep);
+      border-radius: var(--r-md);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--label2);
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: all .15s;
+    }
+    .created-meta-link:hover { border-color: var(--accent); color: var(--accent); background: var(--blue-lt); }
+
+    @media (max-width: 600px) {
+      .home-wrap { padding: 24px 16px 48px; }
+      .home-hd h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="home-topbar">
+    <a class="home-brand" href="/">Ad<em>Brief</em></a>
+    <div class="home-topbar-right">
+      <button class="dark-toggle" id="darkToggle" title="Toggle dark mode">🌙</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="home-wrap">
+    <div class="home-hd">
+      <h1>Clients</h1>
+      <button class="btn-outline" id="addClientBtn">+ Add client</button>
+    </div>
+
+    <div class="client-grid" id="clientGrid">
+      <!-- skeleton while loading -->
+      <div class="skeleton-card">
+        <div class="skel" style="height:20px;width:55%"></div>
+        <div class="skel" style="height:13px;width:40%"></div>
+        <div class="skel" style="height:13px;width:65%"></div>
+        <div style="display:flex;gap:6px">
+          <div class="skel" style="height:22px;width:80px;border-radius:100px"></div>
+          <div class="skel" style="height:22px;width:96px;border-radius:100px"></div>
+        </div>
+      </div>
+      <div class="skeleton-card">
+        <div class="skel" style="height:20px;width:70%"></div>
+        <div class="skel" style="height:13px;width:30%"></div>
+        <div class="skel" style="height:13px;width:50%"></div>
+        <div style="display:flex;gap:6px">
+          <div class="skel" style="height:22px;width:80px;border-radius:100px"></div>
+          <div class="skel" style="height:22px;width:96px;border-radius:100px"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ADD CLIENT MODAL -->
+  <div class="modal-overlay hidden" id="addModal">
+    <div class="modal-box">
+      <div id="addModalContent">
+        <div class="modal-title">Add a client</div>
+        <div class="modal-sub">Enter the client's name. You can set up their Meta Ads connection after.</div>
+        <label class="field-label" style="display:block;font-size:11px;font-weight:700;color:var(--label3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px" for="newClientName">Client name</label>
+        <input type="text" id="newClientName" class="input" placeholder="e.g. Be Known" autocomplete="off">
+        <div class="modal-error" id="addModalError"></div>
+        <div class="modal-actions">
+          <button class="btn-primary" id="addClientSubmit">Create client</button>
+          <button class="modal-cancel" id="addModalCancel">Cancel</button>
+        </div>
+      </div>
+      <!-- Created confirmation state -->
+      <div id="createdContent" style="display:none">
+        <div class="modal-title">✓ Client created</div>
+        <div class="modal-sub" id="createdSub"></div>
+        <div class="created-actions">
+          <a id="createdOpenLink" href="/" class="btn-primary" style="display:block;text-align:center;text-decoration:none;padding:11px">Open workspace →</a>
+          <a id="createdSetupLink" href="/setup" class="created-meta-link">Set up Meta Ads connection</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── dark mode ─────────────────────────────────────────────────────────────
+    let darkMode = localStorage.getItem('darkMode') === '1';
+    const darkBtn = document.getElementById('darkToggle');
+    darkBtn.textContent = darkMode ? '☀️' : '🌙';
+    darkBtn.addEventListener('click', () => {
+      darkMode = !darkMode;
+      document.documentElement.dataset.theme = darkMode ? 'dark' : '';
+      darkBtn.textContent = darkMode ? '☀️' : '🌙';
+      localStorage.setItem('darkMode', darkMode ? '1' : '0');
+    });
+
+    // ── load clients ──────────────────────────────────────────────────────────
+    async function loadClients() {
+      try {
+        const res  = await fetch('/clients');
+        const data = await res.json();
+        renderClients(data.clients || []);
+      } catch {
+        document.getElementById('clientGrid').innerHTML =
+          '<div class="home-empty"><div class="home-empty-icon">⚠️</div><div class="home-empty-title">Could not load clients</div><div class="home-empty-sub">Check your connection and refresh.</div></div>';
+      }
+    }
+
+    function renderClients(clients) {
+      const grid = document.getElementById('clientGrid');
+
+      const cards = clients.map(c => {
+        const weekLabel  = c.latestWeek ? c.latestWeek : 'No data yet';
+        const adsLabel   = c.adCount ? `${c.adCount} ad${c.adCount !== 1 ? 's' : ''}` : '';
+        const briefBadge = c.hasBrief
+          ? `<span class="cc-badge cc-brief-ok"><span class="cc-badge-dot"></span>Brief ready</span>`
+          : `<span class="cc-badge cc-brief-none"><span class="cc-badge-dot"></span>No brief</span>`;
+        const metaBadge = c.metaLinked
+          ? `<span class="cc-badge cc-meta-ok"><span class="cc-badge-dot"></span>Meta linked</span>`
+          : `<span class="cc-badge cc-meta-none"><span class="cc-badge-dot"></span>Meta not set</span>`;
+        const metaFooterLink = !c.metaLinked
+          ? `<a class="client-setup-link" href="/setup?client=${c.slug}" onclick="event.stopPropagation()">Set up Meta →</a>`
+          : '';
+
+        return `
+          <a class="client-card" href="/?client=${encodeURIComponent(c.slug)}" data-slug="${c.slug}">
+            <button class="client-delete-btn" data-slug="${c.slug}" title="Remove client" onclick="event.preventDefault();event.stopPropagation();deleteClient('${c.slug}','${esc(c.name)}')">✕</button>
+            <div class="client-card-name">${esc(c.name)}</div>
+            <div class="client-card-stats">
+              <div class="client-stat"><strong>${weekLabel}</strong>${adsLabel ? ' · ' + adsLabel : ''}</div>
+            </div>
+            <div class="client-card-badges">${briefBadge}${metaBadge}</div>
+            <div class="client-card-footer">
+              <span class="client-open-btn">Open workspace →</span>
+              ${metaFooterLink}
+            </div>
+          </a>`;
+      }).join('');
+
+      const addCard = `
+        <div class="add-client-card" id="addClientCard">
+          <div class="add-client-icon">＋</div>
+          <div class="add-client-label">Add client</div>
+        </div>`;
+
+      if (!clients.length) {
+        grid.innerHTML = `
+          <div class="home-empty">
+            <div class="home-empty-icon">🏢</div>
+            <div class="home-empty-title">No clients yet</div>
+            <div class="home-empty-sub">Add your first client to get started.</div>
+          </div>
+          ${addCard}`;
+      } else {
+        grid.innerHTML = cards + addCard;
+      }
+
+      document.getElementById('addClientCard').addEventListener('click', openModal);
+    }
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function deleteClient(slug, name) {
+      if (!confirm(`Remove "${name}" from the dashboard?\n\nThis only removes it from the client list — all uploaded data and briefs are kept.`)) return;
+      try {
+        await fetch(`/clients/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+        loadClients();
+      } catch {
+        alert('Could not remove client. Try again.');
+      }
+    }
+
+    // ── add client modal ──────────────────────────────────────────────────────
+    const modal       = document.getElementById('addModal');
+    const addContent  = document.getElementById('addModalContent');
+    const createdContent = document.getElementById('createdContent');
+    const nameInput   = document.getElementById('newClientName');
+    const errorEl     = document.getElementById('addModalError');
+    const submitBtn   = document.getElementById('addClientSubmit');
+
+    function openModal() {
+      addContent.style.display = '';
+      createdContent.style.display = 'none';
+      nameInput.value = '';
+      errorEl.textContent = '';
+      modal.classList.remove('hidden');
+      setTimeout(() => nameInput.focus(), 50);
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      loadClients(); // refresh grid after any changes
+    }
+
+    document.getElementById('addClientBtn').addEventListener('click', openModal);
+    document.getElementById('addModalCancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitBtn.click(); });
+
+    submitBtn.addEventListener('click', async () => {
+      const name = nameInput.value.trim();
+      if (!name) { errorEl.textContent = 'Enter a client name.'; return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating…';
+      errorEl.textContent = '';
+      try {
+        const res  = await fetch('/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          errorEl.textContent = data.error || 'Something went wrong.';
+          return;
+        }
+        // Show created state
+        addContent.style.display = 'none';
+        createdContent.style.display = '';
+        document.getElementById('createdSub').textContent = `"${data.name}" is ready. Open their workspace to upload data, or set up the Meta Ads connection first.`;
+        document.getElementById('createdOpenLink').href  = `/?client=${encodeURIComponent(data.slug)}`;
+        document.getElementById('createdSetupLink').href = `/setup?client=${encodeURIComponent(data.slug)}`;
+      } catch {
+        errorEl.textContent = 'Network error — try again.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create client';
+      }
+    });
+
+    // ── init ──────────────────────────────────────────────────────────────────
+    loadClients();
+  </script>
+</body>
+</html>

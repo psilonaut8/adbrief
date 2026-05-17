@@ -26,10 +26,6 @@ function displayKey(key) {
 
 document.addEventListener('DOMContentLoaded', () => {
   if (isViewOnly) document.getElementById('sidebar').classList.add('hidden');
-  if (CLIENT) {
-    const badge = document.getElementById('demoBadge');
-    if (badge) { badge.textContent = CLIENT.toUpperCase(); badge.style.display = 'flex'; }
-  }
 
   setupTabs();
   setupSegment();
@@ -43,6 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAdModal();
   setupContextUpload();
   setupMetaEnrich();
+  setupClientSwitcher();
   loadCurrentWeek();
   loadContextDocs();
 });
@@ -1269,6 +1266,61 @@ function renderContextList(docs) {
       loadContextDocs();
     });
   });
+}
+
+// ── CLIENT SWITCHER ────────────────────────────────────────────────────────
+async function setupClientSwitcher() {
+  if (!CLIENT) return; // no switcher on the default workspace
+
+  const switcher  = document.getElementById('clientSwitcher');
+  const label     = document.getElementById('clientSwitchLabel');
+  const btn       = document.getElementById('clientSwitchBtn');
+  const dropdown  = document.getElementById('clientSwitchDropdown');
+
+  switcher.classList.remove('hidden');
+
+  // Set current client label — use pretty name from registry if available
+  label.textContent = CLIENT;
+
+  // Populate dropdown lazily on first open
+  let loaded = false;
+
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const isOpen = !dropdown.classList.contains('hidden');
+    dropdown.classList.toggle('hidden', isOpen);
+    if (isOpen) return;
+
+    if (!loaded) {
+      dropdown.innerHTML = '<div class="csw-loading">Loading…</div>';
+      try {
+        const res  = await fetch('/clients');
+        const data = await res.json();
+        const clients = data.clients || [];
+
+        // Use the registry name for current client label if found
+        const current = clients.find(c => c.slug === CLIENT);
+        if (current) label.textContent = current.name;
+
+        const items = clients.map(c => {
+          const active = c.slug === CLIENT ? ' csw-active' : '';
+          return `<a class="csw-item${active}" href="/?client=${encodeURIComponent(c.slug)}">${esc(c.name)}</a>`;
+        }).join('');
+
+        dropdown.innerHTML = `
+          <a class="csw-item csw-home" href="/">← All clients</a>
+          <div class="csw-divider"></div>
+          ${items || '<div class="csw-loading">No clients found</div>'}
+        `;
+        loaded = true;
+      } catch {
+        dropdown.innerHTML = '<div class="csw-loading">Could not load</div>';
+      }
+    }
+  });
+
+  // Close on outside click
+  document.addEventListener('click', () => dropdown.classList.add('hidden'));
 }
 
 // ── META API THUMBNAIL ENRICHMENT ──────────────────────────────────────────

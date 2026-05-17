@@ -7,7 +7,7 @@ const path = require('path');
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
 const { parseContextFile } = require('./lib/context-parser');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveClient, listClients, deleteClient } = require('./lib/storage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
@@ -21,6 +21,13 @@ function clientKey(client, baseKey) {
 }
 
 app.use(express.json());
+
+// Home page — serve client dashboard when no ?client= param
+app.get('/', (req, res, next) => {
+  if (!req.query.client) return res.sendFile(path.join(__dirname, 'public', 'home.html'));
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Upload a CSV or Excel file
@@ -296,6 +303,61 @@ app.get('/context', async (req, res) => {
 app.delete('/context/:name', async (req, res) => {
   try {
     await deleteContextDoc(getClient(req), decodeURIComponent(req.params.name));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── CLIENT REGISTRY ───────────────────────────────────────────────────────────
+
+// List all clients with their latest week stats
+app.get('/clients', async (req, res) => {
+  try {
+    const clients = await listClients();
+    const enriched = await Promise.all(clients.map(async (c) => {
+      try {
+        const weeks  = await listWeeks(c.slug);
+        const latest = weeks[0];
+        const weekData = latest ? await loadWeek(latest) : null;
+        const creds  = await loadMetaCredentials(c.slug);
+        const weekKey = latest ? (latest.includes('__') ? latest.split('__').slice(1).join('__') : latest) : null;
+        return {
+          ...c,
+          latestWeek: weekKey,
+          adCount:    weekData?.ads?.length || 0,
+          hasBrief:   !!weekData?.brief,
+          metaLinked: !!creds,
+        };
+      } catch {
+        return { ...c, latestWeek: null, adCount: 0, hasBrief: false, metaLinked: false };
+      }
+    }));
+    res.json({ clients: enriched });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a new client
+app.post('/clients', async (req, res) => {
+  try {
+    const { name } = req.body || {};
+    if (!name || !name.trim()) return res.status(400).json({ error: 'Client name is required.' });
+    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+    if (!slug) return res.status(400).json({ error: 'Invalid client name — use letters and numbers.' });
+    await saveClient(slug, name.trim());
+    res.json({ ok: true, slug, name: name.trim() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a client (removes from registry only — week data stays intact)
+app.delete('/clients/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    await deleteClient(slug);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

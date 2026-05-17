@@ -18,8 +18,20 @@
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="brand">Ad<em>Brief</em></div>
-    <div class="demo-badge" id="demoBadge" style="display:none"></div>
+    <a class="brand" href="/" style="text-decoration:none">Ad<em>Brief</em></a>
+
+    <!-- Client switcher — shown when ?client= is set -->
+    <div class="client-switcher hidden" id="clientSwitcher">
+      <span class="client-switcher-sep">/</span>
+      <div class="client-switcher-inner">
+        <button class="client-switch-btn" id="clientSwitchBtn">
+          <span id="clientSwitchLabel"></span>
+          <span class="client-switch-caret">▾</span>
+        </button>
+        <div class="client-switch-dropdown hidden" id="clientSwitchDropdown"></div>
+      </div>
+    </div>
+
     <nav class="tabnav">
       <button class="tab active" data-panel="brief">Brief</button>
       <button class="tab" data-panel="data">Data</button>
