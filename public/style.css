@@ -1065,9 +1065,42 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   padding: 20px;
 }
 .ad-modal-overlay.hidden { display: none; }
+
+.ad-modal-nav {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, transform .1s;
+  padding: 0 0 2px;
+}
+.ad-modal-nav:hover:not(:disabled) { background: rgba(255,255,255,0.32); transform: scale(1.08); }
+.ad-modal-nav:disabled { opacity: 0.2; cursor: default; }
+
+.ad-modal-counter {
+  text-align: center;
+  font-size: 12px;
+  color: var(--label4);
+  margin-top: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clickable-row { cursor: pointer; }
+.clickable-row:hover { background: var(--blue-lt) !important; }
 
 .ad-modal {
   background: var(--surface);

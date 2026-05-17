@@ -361,6 +361,7 @@
 
   <!-- AD DETAIL MODAL -->
   <div class="ad-modal-overlay hidden" id="adModalOverlay">
+    <button class="ad-modal-nav" id="adModalPrev" aria-label="Previous ad">&#8249;</button>
     <div class="ad-modal" id="adModal">
       <button class="ad-modal-close" id="adModalClose">✕</button>
       <div class="ad-modal-image" id="adModalImage"></div>
@@ -368,8 +369,10 @@
         <div class="ad-modal-top" id="adModalTop"></div>
         <div class="ad-modal-name" id="adModalName"></div>
         <div class="ad-modal-metrics" id="adModalMetrics"></div>
+        <div class="ad-modal-counter" id="adModalCounter"></div>
       </div>
     </div>
+    <button class="ad-modal-nav" id="adModalNext" aria-label="Next ad">&#8250;</button>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

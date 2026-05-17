@@ -668,12 +668,9 @@ function renderCardView() {
     </div>
   `).join('');
 
-  // Wire up click to open modal
+  // Wire up click to open modal — pass full sorted list so arrows navigate in card order
   document.getElementById('cardView').querySelectorAll('.ad-data-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const idx = parseInt(card.dataset.adidx);
-      openAdModal(ads[idx]);
-    });
+    card.addEventListener('click', () => openAdModal(ads, parseInt(card.dataset.adidx)));
   });
 }
 
@@ -843,8 +840,8 @@ function renderDataTable() {
   const showDate    = document.getElementById('thDate').style.display    !== 'none';
   const showStatus  = document.getElementById('thStatus').style.display  !== 'none';
   const showResults = document.getElementById('thResults').style.display !== 'none';
-  document.getElementById('dataTableBody').innerHTML = rows.map(ad => `
-    <tr>
+  document.getElementById('dataTableBody').innerHTML = rows.map((ad, i) => `
+    <tr class="clickable-row" data-rowidx="${i}">
       <td class="ad-name-cell">${esc(ad.adName || '—')}</td>
       ${showDate    ? `<td class="date-cell">${esc(ad.dateCreated || ad.dateStart || '—')}</td>` : ''}
       ${showStatus  ? `<td>${statusBadge(ad.adStatus)}</td>` : ''}
@@ -865,6 +862,11 @@ function renderDataTable() {
     if (th.dataset.col === dataSortCol) {
       th.classList.add(dataSortAsc ? 'sort-asc' : 'sort-desc');
     }
+  });
+
+  // Table rows open modal; arrows navigate in current sort order
+  document.getElementById('dataTableBody').querySelectorAll('.clickable-row').forEach(tr => {
+    tr.addEventListener('click', () => openAdModal(rows, parseInt(tr.dataset.rowidx)));
   });
 }
 
@@ -997,8 +999,19 @@ function renderTrendsTable() {
 }
 
 // ── AD DETAIL MODAL ────────────────────────────────────────────────────────
-function openAdModal(ad) {
-  const overlay = document.getElementById('adModalOverlay');
+let modalAdList = [];
+let modalAdIndex = 0;
+
+function openAdModal(adList, index) {
+  modalAdList  = adList;
+  modalAdIndex = index;
+  _renderModalAd();
+  document.getElementById('adModalOverlay').classList.remove('hidden');
+}
+
+function _renderModalAd() {
+  const ad = modalAdList[modalAdIndex];
+  if (!ad) return;
 
   // Image
   const imgWrap = document.getElementById('adModalImage');
@@ -1010,11 +1023,11 @@ function openAdModal(ad) {
     imgWrap.style.display = 'none';
   }
 
-  // Format badge + name
+  // Format badge + status + name
   document.getElementById('adModalTop').innerHTML = formatBadge(ad.format) + (ad.adStatus ? statusBadge(ad.adStatus) : '');
   document.getElementById('adModalName').textContent = ad.adName || '—';
 
-  // All metrics
+  // Metrics
   const metrics = [
     ad.results != null ? { label: ad.resultType || 'Results', value: Math.round(ad.results).toLocaleString(), cls: '' } : null,
     { label: 'ROAS',        value: fmtNum(ad.roas),              cls: roasColor(ad.roas) },
@@ -1033,14 +1046,36 @@ function openAdModal(ad) {
       <span class="adc-value ${m.cls}">${m.value}</span>
     </div>`).join('');
 
-  overlay.classList.remove('hidden');
+  // Counter + nav state
+  const total = modalAdList.length;
+  document.getElementById('adModalCounter').textContent = total > 1 ? `${modalAdIndex + 1} / ${total}` : '';
+  document.getElementById('adModalPrev').disabled = modalAdIndex === 0;
+  document.getElementById('adModalNext').disabled = modalAdIndex === total - 1;
+
+  // Scroll modal body back to top on navigation
+  document.getElementById('adModal').scrollTop = 0;
 }
 
 function setupAdModal() {
   const overlay = document.getElementById('adModalOverlay');
-  document.getElementById('adModalClose').addEventListener('click', () => overlay.classList.add('hidden'));
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') overlay.classList.add('hidden'); });
+  const close   = () => overlay.classList.add('hidden');
+
+  document.getElementById('adModalClose').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  document.getElementById('adModalPrev').addEventListener('click', () => {
+    if (modalAdIndex > 0) { modalAdIndex--; _renderModalAd(); }
+  });
+  document.getElementById('adModalNext').addEventListener('click', () => {
+    if (modalAdIndex < modalAdList.length - 1) { modalAdIndex++; _renderModalAd(); }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (overlay.classList.contains('hidden')) return;
+    if (e.key === 'Escape')      close();
+    if (e.key === 'ArrowLeft'  && modalAdIndex > 0)                          { modalAdIndex--; _renderModalAd(); }
+    if (e.key === 'ArrowRight' && modalAdIndex < modalAdList.length - 1)     { modalAdIndex++; _renderModalAd(); }
+  });
 }
 
 // ── DARK MODE ──────────────────────────────────────────────────────────────
