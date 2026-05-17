@@ -3,11 +3,12 @@ const express = require('express');
 const multer = require('multer');
 const fetch = require('node-fetch');
 const path = require('path');
+const crypto = require('crypto');
 
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
 const { parseContextFile } = require('./lib/context-parser');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveClient, listClients, deleteClient } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveClient, listClients, findClientByToken, deleteClient } = require('./lib/storage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
@@ -311,17 +312,26 @@ app.delete('/context/:name', async (req, res) => {
 
 // ── CLIENT REGISTRY ───────────────────────────────────────────────────────────
 
-// List all clients with their latest week stats
+// List all clients with their latest week stats + ensure every client has a token
 app.get('/clients', async (req, res) => {
   try {
     const clients = await listClients();
+
+    // Backfill tokens for any clients created before this feature
+    for (const c of clients) {
+      if (!c.token) {
+        c.token = crypto.randomBytes(10).toString('hex');
+        await saveClient(c.slug, c.name, c.token);
+      }
+    }
+
     const enriched = await Promise.all(clients.map(async (c) => {
       try {
-        const weeks  = await listWeeks(c.slug);
-        const latest = weeks[0];
+        const weeks    = await listWeeks(c.slug);
+        const latest   = weeks[0];
         const weekData = latest ? await loadWeek(latest) : null;
-        const creds  = await loadMetaCredentials(c.slug);
-        const weekKey = latest ? (latest.includes('__') ? latest.split('__').slice(1).join('__') : latest) : null;
+        const creds    = await loadMetaCredentials(c.slug);
+        const weekKey  = latest ? (latest.includes('__') ? latest.split('__').slice(1).join('__') : latest) : null;
         return {
           ...c,
           latestWeek: weekKey,
@@ -339,15 +349,16 @@ app.get('/clients', async (req, res) => {
   }
 });
 
-// Create a new client
+// Create a new client — generates a unique share token
 app.post('/clients', async (req, res) => {
   try {
     const { name } = req.body || {};
     if (!name || !name.trim()) return res.status(400).json({ error: 'Client name is required.' });
-    const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
+    const slug  = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32);
     if (!slug) return res.status(400).json({ error: 'Invalid client name — use letters and numbers.' });
-    await saveClient(slug, name.trim());
-    res.json({ ok: true, slug, name: name.trim() });
+    const token = crypto.randomBytes(10).toString('hex');
+    await saveClient(slug, name.trim(), token);
+    res.json({ ok: true, slug, name: name.trim(), token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -359,6 +370,39 @@ app.delete('/clients/:slug', async (req, res) => {
     const slug = req.params.slug.toLowerCase().replace(/[^a-z0-9_-]/g, '');
     await deleteClient(slug);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── CLIENT-FACING VIEW ────────────────────────────────────────────────────────
+
+// Serve the client view page
+app.get('/view/:token', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'view.html'));
+});
+
+// API: return brief + comments for a token (never exposes the internal slug)
+app.get('/api/view/:token', async (req, res) => {
+  try {
+    const client = await findClientByToken(req.params.token);
+    if (!client) return res.status(404).json({ error: 'Link not found or expired.' });
+
+    const weeks = await listWeeks(client.slug);
+    const latest = weeks[0];
+    if (!latest) return res.json({ clientName: client.name, week: null });
+
+    const weekData = await loadWeek(latest);
+    const weekKey  = latest.includes('__') ? latest.split('__').slice(1).join('__') : latest;
+
+    res.json({
+      clientName: client.name,
+      weekKey:    latest,   // full key needed for comment endpoints
+      weekLabel:  weekKey,  // display key (no slug prefix)
+      brief:      weekData?.brief   || null,
+      comments:   weekData?.comments || [],
+      adCount:    weekData?.ads?.length || 0,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

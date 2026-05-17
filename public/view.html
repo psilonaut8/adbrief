@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ad Performance Brief</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <script>if(localStorage.getItem('darkMode')==='1')document.documentElement.dataset.theme='dark'</script>
+  <style>
+    html, body { height: auto; min-height: 100vh; overflow: auto; display: block; }
+
+    /* ── topbar ── */
+    .view-topbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border-bottom: 1px solid var(--sep);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    [data-theme="dark"] .view-topbar { background: rgba(28,28,30,0.92); }
+
+    .view-brand { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; color: var(--label); }
+    .view-brand em { color: var(--accent); font-style: normal; }
+    .view-client-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--label3);
+      margin-left: 12px;
+      padding-left: 12px;
+      border-left: 1px solid var(--sep);
+    }
+    .view-topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    /* ── layout ── */
+    .view-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 72px;
+    }
+
+    /* ── page header ── */
+    .view-hd {
+      margin-bottom: 28px;
+    }
+    .view-hd-week {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--label4);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    .view-hd-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.6px;
+      color: var(--label);
+      margin-bottom: 4px;
+    }
+    .view-hd-sub {
+      font-size: 13px;
+      color: var(--label4);
+    }
+
+    /* ── brief grid (reuse main app grid) ── */
+    .view-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 640px) { .view-grid { grid-template-columns: 1fr; } }
+
+    /* ── error / empty states ── */
+    .view-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      gap: 10px;
+    }
+    .view-error-icon  { font-size: 44px; opacity: .35; }
+    .view-error-title { font-size: 18px; font-weight: 700; color: var(--label3); }
+    .view-error-sub   { font-size: 13px; color: var(--label4); line-height: 1.6; max-width: 320px; }
+
+    /* ── spinner ── */
+    .view-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+    }
+
+    /* ── comments (adapted from main app) ── */
+    .view-comments-wrap {
+      background: var(--surface);
+      border: 1px solid var(--sep2);
+      border-radius: var(--r-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .view-comments-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--label3);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 14px;
+    }
+    .view-comment-form {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--sep2);
+    }
+    .view-comment-form .btn-primary { align-self: flex-start; padding: 9px 20px; width: auto; }
+
+    /* ── footer ── */
+    .view-footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 11px;
+      color: var(--label4);
+    }
+    .view-footer a { color: var(--label4); text-decoration: none; }
+    .view-footer a:hover { color: var(--label3); }
+  </style>
+</head>
+<body>
+
+  <header class="view-topbar">
+    <div class="view-brand">Ad<em>Brief</em></div>
+    <span class="view-client-name" id="viewClientName"></span>
+    <div class="view-topbar-right">
+      <button class="dark-toggle" id="darkToggle" title="Toggle dark mode">🌙</button>
+    </div>
+  </header>
+
+  <main class="view-wrap" id="viewMain">
+    <div class="view-loading"><div class="spinner"></div></div>
+  </main>
+
+  <script>
+    // ── dark mode ──────────────────────────────────────────────────────────────
+    let darkMode = localStorage.getItem('darkMode') === '1';
+    const darkBtn = document.getElementById('darkToggle');
+    darkBtn.textContent = darkMode ? '☀️' : '🌙';
+    darkBtn.addEventListener('click', () => {
+      darkMode = !darkMode;
+      document.documentElement.dataset.theme = darkMode ? 'dark' : '';
+      darkBtn.textContent = darkMode ? '☀️' : '🌙';
+      localStorage.setItem('darkMode', darkMode ? '1' : '0');
+    });
+
+    // ── helpers ────────────────────────────────────────────────────────────────
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' · ' +
+        d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    const token = location.pathname.split('/view/')[1] || '';
+
+    // ── load data ──────────────────────────────────────────────────────────────
+    let viewWeekKey = null;
+    let viewComments = [];
+
+    async function loadView() {
+      const main = document.getElementById('viewMain');
+      try {
+        const res  = await fetch(`/api/view/${token}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError('🔗', 'Link not found', 'This link may be invalid or expired. Contact your account team for a new one.');
+          return;
+        }
+
+        document.getElementById('viewClientName').textContent = data.clientName || '';
+        document.title = `Ad Performance Brief — ${data.clientName || ''}`;
+
+        if (!data.brief) {
+          showError('📋', 'Brief not ready yet', 'Your team is preparing this week\'s performance brief. Check back soon.');
+          return;
+        }
+
+        viewWeekKey  = data.weekKey;
+        viewComments = data.comments || [];
+
+        main.innerHTML = renderView(data);
+        wireComments();
+      } catch {
+        showError('⚠️', 'Could not load brief', 'Check your connection and refresh the page.');
+      }
+    }
+
+    function showError(icon, title, sub) {
+      document.getElementById('viewMain').innerHTML = `
+        <div class="view-error">
+          <div class="view-error-icon">${icon}</div>
+          <div class="view-error-title">${esc(title)}</div>
+          <div class="view-error-sub">${esc(sub)}</div>
+        </div>`;
+    }
+
+    // ── render brief ───────────────────────────────────────────────────────────
+    function renderView(data) {
+      const brief = data.brief;
+      const week  = data.weekLabel || '';
+
+      return `
+        <div class="view-hd">
+          <div class="view-hd-week">${esc(week)}</div>
+          <div class="view-hd-title">Ad Performance Brief</div>
+          <div class="view-hd-sub">Generated from your Meta Ads data · ${data.adCount} ads analysed</div>
+        </div>
+
+        ${renderSummary(brief.summary)}
+
+        <div class="view-grid">
+          ${renderSection('topPerformers',  brief.topPerformers,  '🏆', 'Top Performers',  'green',  a => adCard(a, a.why, a.action, a.metric, 'green'))}
+          ${renderSection('makeNext',       brief.makeNext,       '💡', 'Make Next',       'blue',   a => ideaCard(a))}
+          ${renderSection('fatigueAlerts',  brief.fatigueAlerts,  '⚠️', 'Fatigue Alerts',  'orange', a => adCard(a, a.why, a.action, a.metric, 'orange'))}
+          ${renderSection('underperformers',brief.underperformers,'📉', 'Underperformers', 'orange', a => adCard(a, a.why, a.action, a.metric, 'orange'))}
+          ${renderSection('retireNow',      brief.retireNow,      '🔴', 'Retire Now',      'red',    a => adCard(a, a.reason, null, a.metric, 'red'), true)}
+        </div>
+
+        ${renderComments(viewComments)}
+
+        <div class="view-footer">Powered by <a href="https://adbrief.onrender.com" target="_blank">AdBrief</a></div>
+      `;
+    }
+
+    function renderSummary(summary) {
+      if (!summary) return '';
+      const content = Array.isArray(summary)
+        ? `<ul class="summary-bullets">${summary.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`
+        : `<p class="summary-text">${esc(summary)}</p>`;
+      return `
+        <div class="bcard summary-card" style="margin-bottom:10px">
+          <div class="bcard-title"><span class="ico ico-blue">✦</span> Summary</div>
+          ${content}
+        </div>`;
+    }
+
+    function renderSection(id, items, icon, label, color, tpl, fullWidth) {
+      const count = items?.length || 0;
+      const gridSpan = fullWidth ? 'grid-column:1/-1' : '';
+      const content = count
+        ? `<div class="ad-list">${items.map(tpl).join('')}</div>`
+        : `<p class="empty-note">None this week.</p>`;
+      const icoClass = { green:'ico-green', blue:'ico-blue', orange:'ico-orange', red:'ico-red' }[color] || '';
+      const countBadge = count ? `<span class="bcard-count">${count}</span>` : '';
+      return `
+        <div class="bcard" style="${gridSpan}">
+          <div class="bcard-title">
+            <span class="ico ${icoClass}">${icon}</span>
+            ${esc(label)} ${countBadge}
+          </div>
+          ${content}
+        </div>`;
+    }
+
+    function adCard(a, why, action, metric, color) {
+      const name = a.adName || a.concept || '';
+      return `<div class="ad-item ${color || ''}">
+        ${metric ? `<span class="ad-metric">${esc(metric)}</span>` : ''}
+        <div class="ad-name">${esc(name)}</div>
+        ${why    ? `<div class="ad-why">${esc(why)}</div>` : ''}
+        ${action ? `<span class="ad-action">${esc(action)}</span>` : ''}
+      </div>`;
+    }
+
+    function ideaCard(a) {
+      return `<div class="ad-item blue">
+        <div class="ad-name">${esc(a.concept)}</div>
+        <div class="ad-why">${esc(a.rationale)}</div>
+      </div>`;
+    }
+
+    // ── comments ───────────────────────────────────────────────────────────────
+    const REACTIONS = ['👍', '❤️', '🔥'];
+
+    function renderComments(comments) {
+      const list = comments.length
+        ? comments.map((c, i) => {
+            const reactions = c.reactions || {};
+            const rKey = `r_view_${i}_${c.createdAt}`;
+            return `
+              <div class="comment-item">
+                <div class="comment-meta">
+                  <span class="comment-author">${esc(c.author)}</span>
+                  <span class="comment-time">${formatTime(c.createdAt)}${c.editedAt ? ' · edited' : ''}</span>
+                </div>
+                <div class="comment-text">${esc(c.text)}</div>
+                <div class="comment-reactions">
+                  ${REACTIONS.map(emoji => {
+                    const count = reactions[emoji] || 0;
+                    const reacted = localStorage.getItem(`${rKey}_${emoji}`) === '1';
+                    return `<button class="reaction-btn${reacted ? ' reacted' : ''}" data-i="${i}" data-emoji="${emoji}" data-rkey="${rKey}_${emoji}">${emoji}${count ? '<span class="reaction-count">' + count + '</span>' : ''}</button>`;
+                  }).join('')}
+                </div>
+              </div>`;
+          }).join('')
+        : '<p class="empty-note" style="margin-bottom:12px">No comments yet — add one below.</p>';
+
+      return `
+        <div class="view-comments-wrap">
+          <div class="view-comments-title">Comments</div>
+          <div id="viewCommentsList">${list}</div>
+          <div class="view-comment-form">
+            <input type="text" id="viewCommentAuthor" class="input" placeholder="Your name" style="max-width:220px">
+            <textarea id="viewCommentText" class="input" rows="3" placeholder="Leave a comment…"></textarea>
+            <button class="btn-primary" id="viewSubmitComment">Post comment</button>
+          </div>
+        </div>`;
+    }
+
+    function wireComments() {
+      // Reaction buttons
+      document.querySelectorAll('.reaction-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!viewWeekKey) return;
+          const i = parseInt(btn.dataset.i);
+          const emoji = btn.dataset.emoji;
+          const rkey = btn.dataset.rkey;
+          const reacted = localStorage.getItem(rkey) === '1';
+          try {
+            const res = await fetch('/reaction', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ weekKey: viewWeekKey, index: i, emoji, delta: reacted ? -1 : 1 }),
+            });
+            const data = await res.json();
+            if (!res.ok) return;
+            reacted ? localStorage.removeItem(rkey) : localStorage.setItem(rkey, '1');
+            viewComments = data.comments;
+            refreshCommentsList();
+          } catch {}
+        });
+      });
+
+      // Submit comment
+      const submitBtn = document.getElementById('viewSubmitComment');
+      if (submitBtn) {
+        submitBtn.addEventListener('click', async () => {
+          const author = document.getElementById('viewCommentAuthor').value.trim();
+          const text   = document.getElementById('viewCommentText').value.trim();
+          if (!author) { alert('Please enter your name.'); return; }
+          if (!text)   { alert('Please write a comment.'); return; }
+          if (!viewWeekKey) return;
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Posting…';
+          try {
+            const res = await fetch('/comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ weekKey: viewWeekKey, author, text }),
+            });
+            const data = await res.json();
+            if (!res.ok) { alert(data.error || 'Could not post comment.'); return; }
+            document.getElementById('viewCommentText').value = '';
+            viewComments = data.comments;
+            refreshCommentsList();
+          } catch {
+            alert('Network error — could not post comment.');
+          } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Post comment';
+          }
+        });
+      }
+    }
+
+    function refreshCommentsList() {
+      const listEl = document.getElementById('viewCommentsList');
+      if (!listEl) return;
+      const list = viewComments.length
+        ? viewComments.map((c, i) => {
+            const reactions = c.reactions || {};
+            const rKey = `r_view_${i}_${c.createdAt}`;
+            return `
+              <div class="comment-item">
+                <div class="comment-meta">
+                  <span class="comment-author">${esc(c.author)}</span>
+                  <span class="comment-time">${formatTime(c.createdAt)}${c.editedAt ? ' · edited' : ''}</span>
+                </div>
+                <div class="comment-text">${esc(c.text)}</div>
+                <div class="comment-reactions">
+                  ${REACTIONS.map(emoji => {
+                    const count = reactions[emoji] || 0;
+                    const reacted = localStorage.getItem(`${rKey}_${emoji}`) === '1';
+                    return `<button class="reaction-btn${reacted ? ' reacted' : ''}" data-i="${i}" data-emoji="${emoji}" data-rkey="${rKey}_${emoji}">${emoji}${count ? '<span class="reaction-count">' + count + '</span>' : ''}</button>`;
+                  }).join('')}
+                </div>
+              </div>`;
+          }).join('')
+        : '<p class="empty-note" style="margin-bottom:12px">No comments yet — add one below.</p>';
+      listEl.innerHTML = list;
+      wireComments();
+    }
+
+    // ── fix ad-item colors: re-map from brief section context ─────────────────
+    // The renderSection passes the color as a class to the wrapper bcard,
+    // and adCard returns '' for color. We need to assign colors from sections.
+    // Easier approach: re-render with color baked in via a closure in renderSection.
+    // (The current setup already handles this because renderSection wraps in .ad-item + color class)
+    // The adColor() fn above returns '' but that's fine — the color comes from the section's tpl call.
+
+    loadView();
+  </script>
+</body>
+</html>

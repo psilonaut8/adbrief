@@ -168,6 +168,23 @@
     }
     .client-setup-link:hover { color: var(--label3); text-decoration: underline; }
 
+    .copy-link-btn {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--label3);
+      background: none;
+      border: 1px solid var(--sep);
+      border-radius: var(--r-sm);
+      padding: 3px 9px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .copy-link-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--blue-lt); }
+    .copy-link-btn.copied { border-color: var(--green); color: #1a7a35; background: var(--green-lt); }
+    [data-theme="dark"] .copy-link-btn.copied { color: #4ade80; }
+
     .client-delete-btn {
       position: absolute;
       top: 12px;
@@ -397,6 +414,7 @@
         <div class="created-actions">
           <a id="createdOpenLink" href="/" class="btn-primary" style="display:block;text-align:center;text-decoration:none;padding:11px">Open workspace →</a>
           <a id="createdSetupLink" href="/setup" class="created-meta-link">Set up Meta Ads connection</a>
+          <button id="createdCopyBtn" class="created-meta-link" style="border:none;cursor:pointer;background:none;font-family:inherit;font-size:13px;color:var(--label3)">🔗 Copy client view link</button>
         </div>
       </div>
     </div>
@@ -442,6 +460,8 @@
           ? `<a class="client-setup-link" href="/setup?client=${c.slug}" onclick="event.stopPropagation()">Set up Meta →</a>`
           : '';
 
+        const viewUrl  = `${location.origin}/view/${c.token}`;
+
         return `
           <a class="client-card" href="/?client=${encodeURIComponent(c.slug)}" data-slug="${c.slug}">
             <button class="client-delete-btn" data-slug="${c.slug}" title="Remove client" onclick="event.preventDefault();event.stopPropagation();deleteClient('${c.slug}','${esc(c.name)}')">✕</button>
@@ -452,7 +472,10 @@
             <div class="client-card-badges">${briefBadge}${metaBadge}</div>
             <div class="client-card-footer">
               <span class="client-open-btn">Open workspace →</span>
-              ${metaFooterLink}
+              <button class="copy-link-btn" title="Copy client view link"
+                onclick="event.preventDefault();event.stopPropagation();copyLink('${viewUrl}', this)">
+                🔗 Copy link
+              </button>
             </div>
           </a>`;
       }).join('');
@@ -481,6 +504,19 @@
     function esc(str) {
       if (!str) return '';
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function copyLink(url, btn) {
+      navigator.clipboard.writeText(url).then(() => {
+        btn.textContent = '✓ Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '🔗 Copy link';
+          btn.classList.remove('copied');
+        }, 2000);
+      }).catch(() => {
+        prompt('Copy this link:', url);
+      });
     }
 
     async function deleteClient(slug, name) {
@@ -541,9 +577,12 @@
         // Show created state
         addContent.style.display = 'none';
         createdContent.style.display = '';
-        document.getElementById('createdSub').textContent = `"${data.name}" is ready. Open their workspace to upload data, or set up the Meta Ads connection first.`;
+        const viewUrl = `${location.origin}/view/${data.token}`;
+        document.getElementById('createdSub').textContent = `"${data.name}" is ready. Open their workspace to start uploading data, or set up Meta Ads first.`;
         document.getElementById('createdOpenLink').href  = `/?client=${encodeURIComponent(data.slug)}`;
         document.getElementById('createdSetupLink').href = `/setup?client=${encodeURIComponent(data.slug)}`;
+        const copyBtn = document.getElementById('createdCopyBtn');
+        copyBtn.onclick = () => copyLink(viewUrl, copyBtn);
       } catch {
         errorEl.textContent = 'Network error — try again.';
       } finally {
