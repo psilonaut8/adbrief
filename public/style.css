@@ -499,7 +499,7 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .week-select {
   font-size: 12px;
   padding: 4px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--sep);
   border-radius: 6px;
   background: var(--surface2);
   color: var(--label2);
@@ -912,7 +912,7 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   flex-wrap: wrap;
   gap: 8px;
   padding: 14px 0 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--sep2);
   margin-bottom: 14px;
 }
 .data-summary:empty { display: none; }
@@ -931,12 +931,12 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   font-weight: 600;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--label3);
 }
 .ds-val {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--label);
   line-height: 1.2;
 }
 .ds-top { flex: 1; min-width: 160px; max-width: 360px; }
@@ -1249,6 +1249,112 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .fmt-square     { background: #f5f3ff; color: #6d28d9; }
 .fmt-image      { background: #f0f9ff; color: #0369a1; }
 .fmt-other      { background: var(--surface3); color: var(--label3); }
+
+/* ── META CREDENTIALS UI ─────────────────────────────────────────────────── */
+.meta-connected-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  background: var(--green-lt);
+  border: 1px solid rgba(52,199,89,.25);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a7a35;
+}
+[data-theme="dark"] .meta-connected-badge {
+  background: rgba(52,199,89,0.1);
+  border-color: rgba(52,199,89,0.2);
+  color: #4ade80;
+}
+.meta-connected-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(52,199,89,.25);
+}
+.meta-connected-label { flex: 1; }
+.meta-account-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: #1a7a35;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme="dark"] .meta-account-hint { color: #4ade80; }
+
+.meta-change-btn {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--label4);
+  cursor: pointer;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color .15s;
+}
+.meta-change-btn:hover { color: var(--label3); }
+
+.meta-help {
+  margin-bottom: 10px;
+  border: 1px solid var(--sep2);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--surface2);
+}
+.meta-help summary {
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label3);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  user-select: none;
+}
+.meta-help summary::before { content: '▸'; font-size: 10px; transition: transform .15s; }
+.meta-help[open] summary::before { transform: rotate(90deg); }
+.meta-help summary::-webkit-details-marker { display: none; }
+
+.meta-help-steps {
+  margin: 0 11px 10px 11px;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--label2);
+}
+.meta-help-steps li { margin-bottom: 2px; }
+.meta-help-steps strong { color: var(--label); font-weight: 600; }
+
+.meta-help-note {
+  margin: 6px 11px 10px;
+  font-size: 11px;
+  color: var(--label3);
+  line-height: 1.5;
+}
+.meta-help-note code {
+  background: var(--surface3);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--label2);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+#metaFields .input { margin-bottom: 7px; }
+#metaFields .input:last-of-type { margin-bottom: 10px; }
 
 /* ── UTILS ────────────────────────────────────────────────────────────────── */
 .hidden { display: none !important; }

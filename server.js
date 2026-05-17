@@ -7,7 +7,7 @@ const path = require('path');
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
 const { parseContextFile } = require('./lib/context-parser');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials } = require('./lib/storage');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
@@ -304,12 +304,42 @@ app.delete('/context/:name', async (req, res) => {
 
 // ── META API ENRICHMENT ───────────────────────────────────────────────────────
 
-// Tell the frontend which credentials are pre-configured via env vars
-app.get('/meta/config', (req, res) => {
-  res.json({
-    accountConfigured: !!process.env.META_ACCOUNT_ID,
-    tokenConfigured:   !!process.env.META_ACCESS_TOKEN,
-  });
+// Save Meta credentials server-side — token never returned to client after this
+app.post('/meta/credentials', async (req, res) => {
+  try {
+    const { accountId, token } = req.body;
+    if (!accountId || !token) return res.status(400).json({ error: 'accountId and token are required' });
+    await saveMetaCredentials(getClient(req), accountId.trim(), token.trim());
+    // Return a hint only — last 4 chars of account ID so user can confirm it's right
+    const hint = accountId.trim().slice(-4);
+    res.json({ ok: true, hint });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Return whether credentials are saved — never expose the token itself
+app.get('/meta/config', async (req, res) => {
+  try {
+    const creds = await loadMetaCredentials(getClient(req));
+    if (!creds) return res.json({ configured: false });
+    // Return a masked hint so the UI can show which account is connected
+    const id = creds.accountId || '';
+    const hint = id.length > 6 ? '••••' + id.slice(-4) : id;
+    res.json({ configured: true, hint });
+  } catch {
+    res.json({ configured: false });
+  }
+});
+
+// Clear saved credentials
+app.delete('/meta/credentials', async (req, res) => {
+  try {
+    await deleteMetaCredentials(getClient(req));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Fetch all ads from a Meta Ads account and enrich stored ad records with thumbnail URLs.
@@ -317,10 +347,12 @@ app.get('/meta/config', (req, res) => {
 // Matching: adId first (if the CSV export included an "Ad ID" column), then ad name.
 app.post('/meta/enrich', async (req, res) => {
   try {
-    const token     = req.body.token     || process.env.META_ACCESS_TOKEN;
-    const accountId = req.body.accountId || process.env.META_ACCOUNT_ID;
-    if (!token)     return res.status(400).json({ error: 'No access token — add META_ACCESS_TOKEN to environment variables or enter it manually.' });
-    if (!accountId) return res.status(400).json({ error: 'No ad account ID — add META_ACCOUNT_ID to environment variables or enter it manually.' });
+    // Load from DB first, fall back to request body, then env vars
+    const stored    = await loadMetaCredentials(getClient(req));
+    const token     = (stored?.token     && stored.token     !== '') ? stored.token     : (req.body.token     || process.env.META_ACCESS_TOKEN);
+    const accountId = (stored?.accountId && stored.accountId !== '') ? stored.accountId : (req.body.accountId || process.env.META_ACCOUNT_ID);
+    if (!token)     return res.status(400).json({ error: 'No access token saved. Enter your Meta access token and save it first.' });
+    if (!accountId) return res.status(400).json({ error: 'No ad account ID saved. Enter your account ID and save it first.' });
 
     // Normalise account ID — accept with or without "act_" prefix
     const actId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;

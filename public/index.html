@@ -73,12 +73,37 @@
 
       <div class="sgroup" id="metaPanel">
         <div class="slabel">Meta thumbnails</div>
-        <div id="metaFields">
-          <div class="ctx-hint">Fetch ad creative thumbnails directly from the Meta API.</div>
-          <input type="text" id="metaAccountId" class="input" placeholder="Ad Account ID (e.g. act_123…)" style="margin-bottom:6px" />
-          <input type="password" id="metaToken" class="input" placeholder="Access token" style="margin-bottom:8px" />
+
+        <!-- Connected state (shown when credentials are saved) -->
+        <div id="metaConnected" class="hidden">
+          <div class="meta-connected-badge">
+            <span class="meta-connected-dot"></span>
+            <span class="meta-connected-label">Connected</span>
+            <span class="meta-account-hint" id="metaAccountHint"></span>
+          </div>
+          <button class="btn-outline" id="metaEnrichBtn" style="width:100%;margin-top:10px">Fetch thumbnails</button>
+          <button class="meta-change-btn" id="metaChangeBtn">Use different credentials</button>
         </div>
-        <button class="btn-outline" id="metaEnrichBtn" style="width:100%">Fetch thumbnails</button>
+
+        <!-- Input state (shown when no credentials saved) -->
+        <div id="metaFields">
+          <details class="meta-help">
+            <summary>How to get your token</summary>
+            <ol class="meta-help-steps">
+              <li>Go to <strong>business.facebook.com → Settings</strong></li>
+              <li>Click <strong>Users → System Users</strong> in the left menu</li>
+              <li>Create a System User — name it anything, set role to <strong>Analyst</strong></li>
+              <li>Click <strong>Add Assets → Ad Accounts</strong>, select your account, set to <strong>Analyst</strong></li>
+              <li>Click <strong>Generate New Token</strong> → tick <strong>ads_read</strong> → Generate</li>
+              <li>Copy the token — it only shows once</li>
+            </ol>
+            <p class="meta-help-note">Your Ad Account ID looks like <code>act_123456789</code> — find it in the Ads Manager URL or Business Settings → Ad Accounts.</p>
+          </details>
+          <input type="text" id="metaAccountId" class="input" placeholder="Ad Account ID (e.g. act_123…)" style="margin:10px 0 6px" />
+          <input type="password" id="metaToken" class="input" placeholder="Access token" style="margin-bottom:10px" />
+          <button class="btn-outline" id="metaSaveBtn" style="width:100%">Save &amp; fetch thumbnails</button>
+        </div>
+
         <div class="ctx-status" id="metaStatus"></div>
       </div>
 
