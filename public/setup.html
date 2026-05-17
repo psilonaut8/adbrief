@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AdBrief — Connect Meta Ads</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* ── setup page overrides ── */
+    html, body {
+      height: auto;
+      min-height: 100vh;
+      overflow: auto;
+      display: block;
+    }
+
+    .setup-wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px 72px;
+      background: var(--bg);
+    }
+
+    .setup-brand {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
+      color: var(--label);
+      margin-bottom: 36px;
+    }
+    .setup-brand em { color: var(--accent); font-style: normal; }
+
+    .setup-card {
+      width: 100%;
+      max-width: 580px;
+      background: var(--surface);
+      border: 1px solid var(--sep2);
+      border-radius: 20px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    /* ── card header ── */
+    .setup-head {
+      padding: 28px 32px 22px;
+      border-bottom: 1px solid var(--sep2);
+    }
+    .setup-head h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--label);
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+    .setup-head p {
+      font-size: 13.5px;
+      color: var(--label3);
+      line-height: 1.6;
+    }
+
+    /* ── step sections ── */
+    .setup-step {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--sep2);
+    }
+    .setup-step:last-child { border-bottom: none; }
+
+    .step-hd {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-num.verified { background: var(--green); font-size: 14px; }
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--label);
+      line-height: 1.3;
+    }
+
+    /* ── instruction list ── */
+    .step-ol {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      counter-reset: steps;
+    }
+    .step-ol li {
+      counter-increment: steps;
+      display: flex;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--label2);
+      line-height: 1.55;
+      align-items: flex-start;
+    }
+    .step-ol li::before {
+      content: counter(steps);
+      min-width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--surface3);
+      border: 1px solid var(--sep);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--label3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-ol a { color: var(--accent); text-decoration: none; font-weight: 500; }
+    .step-ol a:hover { text-decoration: underline; }
+    .step-ol strong { color: var(--label); font-weight: 600; }
+
+    .step-note {
+      background: var(--surface2);
+      border: 1px solid var(--sep2);
+      border-radius: var(--r-sm);
+      padding: 11px 14px;
+      font-size: 12.5px;
+      color: var(--label3);
+      line-height: 1.6;
+    }
+    .step-note code {
+      background: var(--surface3);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--label2);
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+    .step-note strong { color: var(--label2); font-weight: 600; }
+
+    /* ── form fields ── */
+    .setup-field { margin-bottom: 12px; }
+    .setup-field:last-of-type { margin-bottom: 0; }
+
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--label3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .test-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    #testSpinner {
+      font-size: 12px;
+      color: var(--label4);
+    }
+
+    .test-result {
+      margin-top: 12px;
+      padding: 11px 14px;
+      border-radius: var(--r-sm);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.5;
+      display: none;
+    }
+    .test-result.ok    { background: var(--green-lt);  color: #1a7a35; border: 1px solid rgba(52,199,89,.25); display: block; }
+    .test-result.error { background: var(--red-lt);    color: var(--red); border: 1px solid rgba(255,59,48,.2); display: block; }
+    [data-theme="dark"] .test-result.ok    { color: #4ade80; }
+    [data-theme="dark"] .test-result.error { color: #f87171; }
+
+    /* ── step 3: save ── */
+    #step3 { display: none; }
+    #step3 .btn-primary { font-size: 15px; padding: 13px; }
+
+    /* ── done state ── */
+    #setupDone {
+      display: none;
+      text-align: center;
+      padding: 48px 32px;
+    }
+    .done-icon  { font-size: 52px; margin-bottom: 16px; line-height: 1; }
+    .done-title { font-size: 22px; font-weight: 800; letter-spacing: -0.4px; color: var(--label); margin-bottom: 8px; }
+    .done-sub   { font-size: 14px; color: var(--label3); line-height: 1.6; margin-bottom: 28px; }
+    .done-open  {
+      display: inline-block;
+      padding: 13px 32px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: var(--r-md);
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(27,110,243,.28);
+      transition: all .18s;
+    }
+    .done-open:hover { background: var(--accent-h); box-shadow: 0 4px 14px rgba(27,110,243,.35); transform: translateY(-1px); }
+
+    @media (max-width: 640px) {
+      .setup-wrap { padding: 28px 12px 48px; }
+      .setup-head, .setup-step { padding: 20px 20px; }
+      #setupDone { padding: 36px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="setup-wrap">
+    <div class="setup-brand">Ad<em>Brief</em></div>
+
+    <div class="setup-card" id="setupCard">
+
+      <div class="setup-head">
+        <h1>Connect <span id="clientLabel">your</span> Meta Ads account</h1>
+        <p>Follow the steps below — takes about 5 minutes and you only need to do this once.</p>
+      </div>
+
+      <!-- ── Step 1: Instructions ─────────────────────────────────────────── -->
+      <div class="setup-step">
+        <div class="step-hd">
+          <div class="step-num">1</div>
+          <div class="step-title">Create a System User in Meta Business Manager</div>
+        </div>
+        <ol class="step-ol">
+          <li>
+            Go to <a href="https://business.facebook.com/settings" target="_blank" rel="noopener">business.facebook.com</a>
+            and click <strong>Settings</strong> in the left sidebar
+          </li>
+          <li>Navigate to <strong>Users → System Users</strong></li>
+          <li>
+            Click <strong>Add</strong> → give it any name (e.g. "AdBrief") → set the role to <strong>Analyst</strong>
+          </li>
+          <li>
+            Click <strong>Add Assets</strong> → Ad Accounts → find your account → enable <strong>Analyst</strong> access
+          </li>
+          <li>
+            Click <strong>Generate New Token</strong> → tick <strong>ads_read</strong> → click Generate Token
+          </li>
+          <li>Copy the token — <strong>it only shows once, so copy it now</strong></li>
+        </ol>
+        <div class="step-note">
+          Your <strong>Ad Account ID</strong> looks like <code>act_123456789</code>.
+          Find it in Business Manager under <strong>Accounts → Ad Accounts</strong>,
+          or in the Ads Manager URL bar.
+        </div>
+      </div>
+
+      <!-- ── Step 2: Credentials ──────────────────────────────────────────── -->
+      <div class="setup-step">
+        <div class="step-hd">
+          <div class="step-num">2</div>
+          <div class="step-title">Enter your credentials and test the connection</div>
+        </div>
+
+        <div class="setup-field">
+          <label class="field-label" for="setupAccountId">Ad Account ID</label>
+          <input type="text" id="setupAccountId" class="input" placeholder="act_123456789" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="setup-field">
+          <label class="field-label" for="setupToken">Access Token</label>
+          <input type="password" id="setupToken" class="input" placeholder="Paste your token here" autocomplete="off" spellcheck="false">
+        </div>
+
+        <div class="test-row">
+          <button class="btn-outline" id="testBtn">Test connection</button>
+          <span id="testSpinner" style="display:none">Checking…</span>
+        </div>
+        <div id="testResult" class="test-result"></div>
+      </div>
+
+      <!-- ── Step 3: Save (shown after successful test) ───────────────────── -->
+      <div class="setup-step" id="step3">
+        <div class="step-hd">
+          <div class="step-num verified">✓</div>
+          <div class="step-title">Connection verified — save and you're done</div>
+        </div>
+        <button class="btn-primary" id="saveBtn">Save &amp; open AdBrief →</button>
+      </div>
+
+    </div>
+
+    <!-- ── Done state ──────────────────────────────────────────────────────── -->
+    <div class="setup-card" id="setupDone">
+      <div class="done-icon">🎉</div>
+      <div class="done-title" id="doneTitle">All connected!</div>
+      <div class="done-sub" id="doneSub">
+        Meta Ads is linked. You can now fetch thumbnails from the AdBrief sidebar.
+      </div>
+      <a id="openAppLink" href="/" class="done-open">Open AdBrief →</a>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Client from URL ──────────────────────────────────────────────────────
+    const params = new URLSearchParams(location.search);
+    const CLIENT = (params.get('client') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
+
+    // Set client name in heading
+    const clientLabel = document.getElementById('clientLabel');
+    if (CLIENT) {
+      const pretty = CLIENT.charAt(0).toUpperCase() + CLIENT.slice(1).replace(/-/g, ' ');
+      clientLabel.textContent = pretty + ''s';
+    }
+
+    // Set "open app" link
+    const openLink = document.getElementById('openAppLink');
+    openLink.href = CLIENT ? `/?client=${CLIENT}` : '/';
+
+    // ── Elements ─────────────────────────────────────────────────────────────
+    const accountInput = document.getElementById('setupAccountId');
+    const tokenInput   = document.getElementById('setupToken');
+    const testBtn      = document.getElementById('testBtn');
+    const testSpinner  = document.getElementById('testSpinner');
+    const testResult   = document.getElementById('testResult');
+    const step3        = document.getElementById('step3');
+    const saveBtn      = document.getElementById('saveBtn');
+    const setupCard    = document.getElementById('setupCard');
+    const setupDone    = document.getElementById('setupDone');
+
+    let verifiedAccountId = null;
+    let verifiedToken     = null;
+
+    function showResult(msg, type) {
+      testResult.textContent = msg;
+      testResult.className = 'test-result ' + type;
+    }
+
+    // ── Test connection ───────────────────────────────────────────────────────
+    testBtn.addEventListener('click', async () => {
+      const accountId = accountInput.value.trim();
+      const token     = tokenInput.value.trim();
+      if (!accountId) { showResult('Enter your Ad Account ID first.', 'error'); return; }
+      if (!token)     { showResult('Enter your access token first.', 'error'); return; }
+
+      testBtn.disabled = true;
+      testSpinner.style.display = 'inline';
+      testResult.className = 'test-result'; // hide
+      step3.style.display = 'none';
+      verifiedAccountId = null;
+      verifiedToken = null;
+
+      try {
+        const r = await fetch('/meta/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId, token }),
+        });
+        const data = await r.json();
+        if (!r.ok || !data.ok) {
+          showResult(data.error || 'Connection failed. Check your credentials and try again.', 'error');
+        } else {
+          showResult(`✓ Connected to "${data.name}" (${data.accountId})`, 'ok');
+          verifiedAccountId = accountId;
+          verifiedToken = token;
+          step3.style.display = 'block';
+        }
+      } catch {
+        showResult('Network error — check your connection and try again.', 'error');
+      } finally {
+        testBtn.disabled = false;
+        testSpinner.style.display = 'none';
+      }
+    });
+
+    // ── Save & open ───────────────────────────────────────────────────────────
+    saveBtn.addEventListener('click', async () => {
+      if (!verifiedAccountId || !verifiedToken) return;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const r = await fetch(`/meta/credentials?client=${CLIENT}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accountId: verifiedAccountId, token: verifiedToken }),
+        });
+        if (!r.ok) {
+          const data = await r.json();
+          alert(data.error || 'Could not save. Please try again.');
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Save & open AdBrief →';
+          return;
+        }
+        showDone();
+      } catch {
+        alert('Network error — could not save. Please try again.');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save & open AdBrief →';
+      }
+    });
+
+    function showDone(alreadyConfigured) {
+      setupCard.style.display = 'none';
+      setupDone.style.display = 'block';
+      if (alreadyConfigured) {
+        document.getElementById('doneTitle').textContent = 'Already connected!';
+        document.getElementById('doneSub').textContent =
+          `Meta Ads is already linked${alreadyConfigured.hint ? ' (account ' + alreadyConfigured.hint + ')' : ''}. You're good to go.`;
+      }
+    }
+
+    // ── On load: check if already configured ─────────────────────────────────
+    (async () => {
+      try {
+        const r   = await fetch(`/meta/config?client=${CLIENT}`);
+        const cfg = await r.json();
+        if (cfg.configured) showDone(cfg);
+      } catch { /* silent — just show the setup form */ }
+    })();
+
+    // ── Enter key on token field triggers test ────────────────────────────────
+    tokenInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') testBtn.click();
+    });
+  </script>
+</body>
+</html>

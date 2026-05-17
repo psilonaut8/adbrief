@@ -85,23 +85,10 @@
           <button class="meta-change-btn" id="metaChangeBtn">Use different credentials</button>
         </div>
 
-        <!-- Input state (shown when no credentials saved) -->
+        <!-- Not connected state -->
         <div id="metaFields">
-          <details class="meta-help">
-            <summary>How to get your token</summary>
-            <ol class="meta-help-steps">
-              <li>Go to <strong>business.facebook.com → Settings</strong></li>
-              <li>Click <strong>Users → System Users</strong> in the left menu</li>
-              <li>Create a System User — name it anything, set role to <strong>Analyst</strong></li>
-              <li>Click <strong>Add Assets → Ad Accounts</strong>, select your account, set to <strong>Analyst</strong></li>
-              <li>Click <strong>Generate New Token</strong> → tick <strong>ads_read</strong> → Generate</li>
-              <li>Copy the token — it only shows once</li>
-            </ol>
-            <p class="meta-help-note">Your Ad Account ID looks like <code>act_123456789</code> — find it in the Ads Manager URL or Business Settings → Ad Accounts.</p>
-          </details>
-          <input type="text" id="metaAccountId" class="input" placeholder="Ad Account ID (e.g. act_123…)" style="margin:10px 0 6px" />
-          <input type="password" id="metaToken" class="input" placeholder="Access token" style="margin-bottom:10px" />
-          <button class="btn-outline" id="metaSaveBtn" style="width:100%">Save &amp; fetch thumbnails</button>
+          <p class="ctx-hint">Link your Meta Ads account to pull in ad thumbnails automatically.</p>
+          <a class="btn-outline" id="metaSetupLink" href="/setup" style="display:block;text-align:center;text-decoration:none">Set up Meta connection →</a>
         </div>
 
         <div class="ctx-status" id="metaStatus"></div>

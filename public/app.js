@@ -1273,15 +1273,16 @@ function renderContextList(docs) {
 
 // ── META API THUMBNAIL ENRICHMENT ──────────────────────────────────────────
 async function setupMetaEnrich() {
-  const accountInput = document.getElementById('metaAccountId');
-  const tokenInput   = document.getElementById('metaToken');
-  const enrichBtn    = document.getElementById('metaEnrichBtn');
-  const saveBtn      = document.getElementById('metaSaveBtn');
-  const changeBtn    = document.getElementById('metaChangeBtn');
-  const status       = document.getElementById('metaStatus');
-  const connected    = document.getElementById('metaConnected');
-  const fields       = document.getElementById('metaFields');
-  const hintEl       = document.getElementById('metaAccountHint');
+  const enrichBtn = document.getElementById('metaEnrichBtn');
+  const changeBtn = document.getElementById('metaChangeBtn');
+  const status    = document.getElementById('metaStatus');
+  const connected = document.getElementById('metaConnected');
+  const fields    = document.getElementById('metaFields');
+  const hintEl    = document.getElementById('metaAccountHint');
+  const setupLink = document.getElementById('metaSetupLink');
+
+  // Point setup link to the right client
+  if (setupLink && CLIENT) setupLink.href = `/setup?client=${CLIENT}`;
 
   function setMetaStatus(msg, type) {
     status.textContent = msg;
@@ -1329,54 +1330,19 @@ async function setupMetaEnrich() {
     }
   }
 
-  // Wire save button
-  saveBtn.addEventListener('click', async () => {
-    const token     = tokenInput.value.trim();
-    const accountId = accountInput.value.trim();
-    if (!accountId) { setMetaStatus('Enter your Ad Account ID.', 'error'); return; }
-    if (!token)     { setMetaStatus('Enter your access token.', 'error'); return; }
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    try {
-      const r = await fetch('/meta/credentials?client=' + CLIENT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId, token }),
-      });
-      const data = await r.json();
-      if (!r.ok) { setMetaStatus(data.error || 'Could not save credentials.', 'error'); return; }
-      tokenInput.value = '';
-      accountInput.value = '';
-      showConnected(data.hint);
-      // Auto-fetch thumbnails right after saving
-      doEnrich();
-    } catch {
-      setMetaStatus('Network error — could not save.', 'error');
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save & fetch thumbnails';
-    }
-  });
-
-  // Wire fetch button (connected state)
   enrichBtn.addEventListener('click', doEnrich);
 
-  // Wire "use different credentials" button
   changeBtn.addEventListener('click', async () => {
-    try {
-      await fetch('/meta/credentials?client=' + CLIENT, { method: 'DELETE' });
-    } catch { /* ignore — just show fields anyway */ }
+    if (!confirm('Disconnect Meta Ads? You can reconnect anytime via the setup page.')) return;
+    try { await fetch('/meta/credentials?client=' + CLIENT, { method: 'DELETE' }); } catch {}
     showFields();
   });
 
   // On load: check if already configured
   try {
     const cfg = await fetch('/meta/config?client=' + CLIENT).then(r => r.json());
-    if (cfg.configured) {
-      showConnected(cfg.hint);
-    } else {
-      showFields();
-    }
+    if (cfg.configured) showConnected(cfg.hint);
+    else showFields();
   } catch {
     showFields();
   }

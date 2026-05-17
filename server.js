@@ -302,7 +302,31 @@ app.delete('/context/:name', async (req, res) => {
   }
 });
 
+// ── SETUP PAGE ────────────────────────────────────────────────────────────────
+app.get('/setup', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'setup.html'));
+});
+
 // ── META API ENRICHMENT ───────────────────────────────────────────────────────
+
+// Validate credentials without saving — used by the setup page "Test connection" button
+app.post('/meta/test', async (req, res) => {
+  try {
+    const { accountId, token } = req.body || {};
+    if (!accountId || !token) return res.status(400).json({ error: 'accountId and token are required.' });
+    const actId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
+    const url = `https://graph.facebook.com/v19.0/${actId}?fields=name,account_status&access_token=${token}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (data.error) {
+      const msg = data.error.message || 'Meta API error.';
+      return res.status(400).json({ error: msg });
+    }
+    res.json({ ok: true, name: data.name || actId, accountId: actId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Save Meta credentials server-side — token never returned to client after this
 app.post('/meta/credentials', async (req, res) => {
