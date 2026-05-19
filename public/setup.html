@@ -251,25 +251,31 @@
         </div>
         <ol class="step-ol">
           <li>
-            Go to <a href="https://business.facebook.com/settings" target="_blank" rel="noopener">business.facebook.com</a>
+            Go to <a href="https://business.facebook.com/settings" target="_blank" rel="noopener">business.facebook.com/settings</a>
             and click <strong>Settings</strong> in the left sidebar
           </li>
-          <li>Navigate to <strong>Users → System Users</strong></li>
+          <li>Navigate to <strong>Users → System Users</strong> → click <strong>Add</strong> → name it "AdBrief" → role: <strong>Analyst</strong></li>
           <li>
-            Click <strong>Add</strong> → give it any name (e.g. "AdBrief") → set the role to <strong>Analyst</strong>
+            Click <strong>Add Assets → Ad Accounts</strong> → find your account → enable <strong>Analyst</strong> access → Save
           </li>
           <li>
-            Click <strong>Add Assets</strong> → Ad Accounts → find your account → enable <strong>Analyst</strong> access
+            Now go to <strong>Accounts → Apps</strong> in the left menu → click <strong>Add → Connect an app ID</strong>
+            → paste your <strong>App ID</strong> (from <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>) → Add.<br>
+            <em>Don't have an app yet? Create one at developers.facebook.com → My Apps → Create App → Business type.</em>
           </li>
           <li>
-            Click <strong>Generate New Token</strong> → tick <strong>ads_read</strong> → click Generate Token
+            Go back to <strong>Users → System Users → AdBrief</strong> → click <strong>Add Assets → Apps</strong>
+            → tick the app you just added → give it <strong>Full control</strong> → Save
           </li>
-          <li>Copy the token — <strong>it only shows once, so copy it now</strong></li>
+          <li>
+            Click <strong>Generate token</strong> → select your app from the dropdown → tick <strong>ads_read</strong> → Generate
+          </li>
+          <li>Copy the token — <strong>it only shows once</strong></li>
         </ol>
         <div class="step-note">
+          <strong>Common gotcha:</strong> Meta requires a <strong>Meta App</strong> to be linked to your System User before it can generate a token. Steps 4–5 above cover this — don't skip them or the Generate token button will be greyed out.<br><br>
           Your <strong>Ad Account ID</strong> looks like <code>act_123456789</code>.
-          Find it in Business Manager under <strong>Accounts → Ad Accounts</strong>,
-          or in the Ads Manager URL bar.
+          Find it under <strong>Accounts → Ad Accounts</strong>, or in the Ads Manager URL bar.
         </div>
       </div>
 
