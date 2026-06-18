@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AdBrief — Connect Meta Ads</title>
+  <title>AdBrief - Connect Meta Ads</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -99,7 +99,7 @@
       line-height: 1.3;
     }
 
-    /* ── instruction list ── */
+    /* instruction list */
     .step-ol {
       list-style: none;
       padding: 0;
@@ -137,6 +137,17 @@
     .step-ol a { color: var(--accent); text-decoration: none; font-weight: 500; }
     .step-ol a:hover { text-decoration: underline; }
     .step-ol strong { color: var(--label); font-weight: 600; }
+    .step-copy {
+      display: block;
+      min-width: 0;
+    }
+    .step-copy em {
+      display: block;
+      margin-top: 4px;
+      color: var(--label3);
+      font-style: normal;
+      font-size: 12.5px;
+    }
 
     .step-note {
       background: var(--surface2);
@@ -240,42 +251,50 @@
 
       <div class="setup-head">
         <h1>Connect <span id="clientLabel">your</span> Meta Ads account</h1>
-        <p>Follow the steps below — takes about 5 minutes and you only need to do this once.</p>
+        <p>Use a temporary Meta access token to troubleshoot thumbnails, then save it only after the test works.</p>
       </div>
 
       <!-- ── Step 1: Instructions ─────────────────────────────────────────── -->
       <div class="setup-step">
         <div class="step-hd">
           <div class="step-num">1</div>
-          <div class="step-title">Create a System User in Meta Business Manager</div>
+          <div class="step-title">Get a temporary Meta access token</div>
         </div>
         <ol class="step-ol">
           <li>
-            Go to <a href="https://business.facebook.com/settings" target="_blank" rel="noopener">business.facebook.com/settings</a>
-            and click <strong>Settings</strong> in the left sidebar
-          </li>
-          <li>Navigate to <strong>Users → System Users</strong> → click <strong>Add</strong> → name it "AdBrief" → role: <strong>Analyst</strong></li>
-          <li>
-            Click <strong>Add Assets → Ad Accounts</strong> → find your account → enable <strong>Analyst</strong> access → Save
+            <span class="step-copy">
+              Open <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Meta Graph API Explorer</a>.
+            </span>
           </li>
           <li>
-            Now go to <strong>Accounts → Apps</strong> in the left menu → click <strong>Add → Connect an app ID</strong>
-            → paste your <strong>App ID</strong> (from <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener">developers.facebook.com/apps</a>) → Add.<br>
-            <em>Don't have an app yet? Create one at developers.facebook.com → My Apps → Create App → Business type.</em>
+            <span class="step-copy">
+              Select your Meta app, or create a basic Business app if Meta asks for one.
+            </span>
           </li>
           <li>
-            Go back to <strong>Users → System Users → AdBrief</strong> → click <strong>Add Assets → Apps</strong>
-            → tick the app you just added → give it <strong>Full control</strong> → Save
+            <span class="step-copy">
+              Click <strong>Generate Access Token</strong>, log in with the personal account that can see the ad account, and approve the prompt.
+            </span>
           </li>
           <li>
-            Click <strong>Generate token</strong> → select your app from the dropdown → tick <strong>ads_read</strong> → Generate
+            <span class="step-copy">
+              Add the <strong>ads_read</strong> permission before generating the token.
+              <em>If Meta shows an advanced access warning, continue for testing. We can switch to a permanent System User token later.</em>
+            </span>
           </li>
-          <li>Copy the token — <strong>it only shows once</strong></li>
+          <li>
+            <span class="step-copy">
+              Copy the token and paste it below. Do not send the token in chat.
+            </span>
+          </li>
+          <li>
+            <span class="step-copy">
+              Find your ad account ID in Ads Manager. It usually looks like <code>act_123456789</code>.
+            </span>
+          </li>
         </ol>
         <div class="step-note">
-          <strong>Common gotcha:</strong> Meta requires a <strong>Meta App</strong> to be linked to your System User before it can generate a token. Steps 4–5 above cover this — don't skip them or the Generate token button will be greyed out.<br><br>
-          Your <strong>Ad Account ID</strong> looks like <code>act_123456789</code>.
-          Find it under <strong>Accounts → Ad Accounts</strong>, or in the Ads Manager URL bar.
+          <strong>For troubleshooting:</strong> a personal access token is fine and may expire quickly. Once thumbnails work, use a System User token for a longer-lived production connection.
         </div>
       </div>
 
@@ -297,7 +316,7 @@
 
         <div class="test-row">
           <button class="btn-outline" id="testBtn">Test connection</button>
-          <span id="testSpinner" style="display:none">Checking…</span>
+          <span id="testSpinner" style="display:none">Checking...</span>
         </div>
         <div id="testResult" class="test-result"></div>
       </div>
@@ -305,22 +324,22 @@
       <!-- ── Step 3: Save (shown after successful test) ───────────────────── -->
       <div class="setup-step" id="step3">
         <div class="step-hd">
-          <div class="step-num verified">✓</div>
-          <div class="step-title">Connection verified — save and you're done</div>
+          <div class="step-num verified">OK</div>
+          <div class="step-title">Connection verified. Save and you're done.</div>
         </div>
-        <button class="btn-primary" id="saveBtn">Save &amp; open AdBrief →</button>
+        <button class="btn-primary" id="saveBtn">Save and open AdBrief</button>
       </div>
 
     </div>
 
     <!-- ── Done state ──────────────────────────────────────────────────────── -->
     <div class="setup-card" id="setupDone">
-      <div class="done-icon">🎉</div>
+      <div class="done-icon">OK</div>
       <div class="done-title" id="doneTitle">All connected!</div>
       <div class="done-sub" id="doneSub">
         Meta Ads is linked. You can now fetch thumbnails from the AdBrief sidebar.
       </div>
-      <a id="openAppLink" href="/" class="done-open">Open AdBrief →</a>
+      <a id="openAppLink" href="/" class="done-open">Open AdBrief</a>
     </div>
 
   </div>
@@ -334,7 +353,7 @@
     const clientLabel = document.getElementById('clientLabel');
     if (CLIENT) {
       const pretty = CLIENT.charAt(0).toUpperCase() + CLIENT.slice(1).replace(/-/g, ' ');
-      clientLabel.textContent = pretty + ''s';
+      clientLabel.textContent = pretty + "'s";
     }
 
     // Set "open app" link
@@ -384,13 +403,13 @@
         if (!r.ok || !data.ok) {
           showResult(data.error || 'Connection failed. Check your credentials and try again.', 'error');
         } else {
-          showResult(`✓ Connected to "${data.name}" (${data.accountId})`, 'ok');
+          showResult(`Connected to "${data.name}" (${data.accountId})`, 'ok');
           verifiedAccountId = accountId;
           verifiedToken = token;
           step3.style.display = 'block';
         }
       } catch {
-        showResult('Network error — check your connection and try again.', 'error');
+        showResult('Network error. Check your connection and try again.', 'error');
       } finally {
         testBtn.disabled = false;
         testSpinner.style.display = 'none';
@@ -401,7 +420,7 @@
     saveBtn.addEventListener('click', async () => {
       if (!verifiedAccountId || !verifiedToken) return;
       saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
+      saveBtn.textContent = 'Saving...';
       try {
         const r = await fetch(`/meta/credentials?client=${CLIENT}`, {
           method: 'POST',
@@ -412,14 +431,14 @@
           const data = await r.json();
           alert(data.error || 'Could not save. Please try again.');
           saveBtn.disabled = false;
-          saveBtn.textContent = 'Save & open AdBrief →';
+          saveBtn.textContent = 'Save and open AdBrief';
           return;
         }
         showDone();
       } catch {
-        alert('Network error — could not save. Please try again.');
+        alert('Network error. Could not save. Please try again.');
         saveBtn.disabled = false;
-        saveBtn.textContent = 'Save & open AdBrief →';
+        saveBtn.textContent = 'Save and open AdBrief';
       }
     });
 
@@ -439,7 +458,7 @@
         const r   = await fetch(`/meta/config?client=${CLIENT}`);
         const cfg = await r.json();
         if (cfg.configured) showDone(cfg);
-      } catch { /* silent — just show the setup form */ }
+      } catch { /* silent, just show the setup form */ }
     })();
 
     // ── Enter key on token field triggers test ────────────────────────────────
