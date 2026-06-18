@@ -22,7 +22,7 @@ function clientKey(client, baseKey) {
 }
 
 const META_API_VERSION = 'v19.0';
-const META_DATE_PRESETS = new Set(['last_7d', 'last_14d', 'last_30d', 'this_month', 'last_month']);
+const META_DATE_PRESETS = new Set(['last_7d', 'last_14d', 'last_30d', 'this_month', 'last_month', 'maximum']);
 
 async function getMetaAuth(req) {
   const stored = await loadMetaCredentials(getClient(req));
