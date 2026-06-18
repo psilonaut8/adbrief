@@ -1026,11 +1026,15 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   flex-direction: column;
   gap: 2px;
   background: var(--surface3);
+  border: 1px solid var(--sep2);
   border-radius: 10px;
   padding: 9px 14px;
   min-width: 90px;
 }
-[data-theme="dark"] .ds-stat { background: rgba(255,255,255,0.06); }
+[data-theme="dark"] .ds-stat {
+  background: #171717;
+  border-color: rgba(255,255,255,0.09);
+}
 .ds-label {
   font-size: 10px;
   font-weight: 600;
@@ -1044,6 +1048,8 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   color: var(--label);
   line-height: 1.2;
 }
+[data-theme="dark"] .ds-label { color: rgba(247,255,249,0.62); }
+[data-theme="dark"] .ds-val { color: #F7FFF9; }
 .ds-top { flex: 1; min-width: 160px; max-width: 360px; }
 .ds-topname {
   font-size: 13px;
@@ -1288,6 +1294,12 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   white-space: nowrap;
 }
 .view-btn.active { background: var(--surface); color: var(--label); font-weight: 600; box-shadow: var(--shadow-sm); }
+[data-theme="dark"] .seg-btn.active,
+[data-theme="dark"] .view-btn.active {
+  background: #202020;
+  color: #F7FFF9;
+  box-shadow: none;
+}
 
 .chart-metric-bar { display: flex; gap: 4px; flex-wrap: wrap; }
 
@@ -1306,6 +1318,10 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   letter-spacing: 0.4px;
 }
 .metric-btn.active { background: var(--accent); color: #06130B; border-color: var(--accent); }
+[data-theme="dark"] .metric-btn.active,
+[data-theme="dark"] .btn-primary {
+  color: #06130B;
+}
 
 .sort-bar-label {
   font-size: 11px;
@@ -1372,6 +1388,11 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+[data-theme="dark"] .adc-metric,
+[data-theme="dark"] .ad-modal-metric {
+  background: #171717;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .adc-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--label4); }
