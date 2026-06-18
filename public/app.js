@@ -24,6 +24,14 @@ function setFileDropCopy(main, sub) {
   if (subEl) subEl.textContent = sub;
 }
 
+function metaImportDiagnostics(data) {
+  if (!data) return '';
+  const accountRows = Number(data.accountInsightRows || 0);
+  const perAdRows = Number(data.perAdInsightRows || 0);
+  const metricRows = Number(data.metricRows || 0);
+  return ` Insights: ${accountRows + perAdRows} rows (${accountRows} account, ${perAdRows} per-ad), ${metricRows} with metrics.`;
+}
+
 // Show wake-up banner once per day
 (function() {
   const banner = document.getElementById('wakeupBanner');
@@ -1434,13 +1442,14 @@ async function setupMetaEnrich() {
         setMetaStatus(data.message || 'No Meta ads found for that range.', 'warn');
       } else {
         const hasMetrics = data.hasMetrics !== false;
+        const diagnosticText = metaImportDiagnostics(data);
         currentWeekKey = data.weekKey;
         if (hasMetrics) {
-          setMetaStatus(`${data.imported} ads imported from Meta.`, 'ok');
+          setMetaStatus(`${data.imported} ads imported from Meta.${diagnosticText}`, 'ok');
           setStatus(`${data.imported} ads loaded from Meta`);
           setDot('ok', `${data.imported} ads ready`);
         } else {
-          setMetaStatus(data.message || `${data.imported} ad names imported, but Meta returned no stats.`, 'warn');
+          setMetaStatus((data.message || `${data.imported} ad names imported, but Meta returned no stats.`) + diagnosticText, 'warn');
           setStatus(`${data.imported} ad names loaded. No stats returned.`, true);
           setDot('idle', `${data.imported} names loaded`);
         }
