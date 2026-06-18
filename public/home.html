@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AdBrief — Clients</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script>if(localStorage.getItem('darkMode')==='1')document.documentElement.dataset.theme='dark'</script>
   <style>
@@ -17,7 +17,7 @@
       display: flex;
       align-items: center;
       padding: 0 24px;
-      background: rgba(255,255,255,0.9);
+      background: var(--topbar-bg);
       backdrop-filter: blur(20px) saturate(1.8);
       -webkit-backdrop-filter: blur(20px) saturate(1.8);
       border-bottom: 1px solid var(--sep);
@@ -25,7 +25,7 @@
       top: 0;
       z-index: 100;
     }
-    [data-theme="dark"] .home-topbar { background: rgba(28,28,30,0.92); }
+    [data-theme="dark"] .home-topbar { background: var(--topbar-bg); }
 
     .home-brand {
       font-size: 18px;
@@ -83,7 +83,7 @@
     }
     .client-card:hover {
       box-shadow: var(--shadow-md);
-      border-color: rgba(27,110,243,.3);
+      border-color: rgba(0,255,122,.3);
       transform: translateY(-1px);
     }
 
@@ -131,7 +131,7 @@
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .cc-brief-ok   { background: var(--green-lt);  color: #1a7a35; }
+    .cc-brief-ok   { background: var(--green-lt);  color: var(--accent); }
     .cc-brief-ok .cc-badge-dot   { background: var(--green); }
     .cc-brief-none { background: var(--surface3); color: var(--label4); }
     .cc-brief-none .cc-badge-dot { background: var(--label4); }
@@ -140,8 +140,8 @@
     .cc-meta-none  { background: var(--surface3); color: var(--label4); }
     .cc-meta-none .cc-badge-dot  { background: var(--label4); }
 
-    [data-theme="dark"] .cc-brief-ok  { color: #4ade80; }
-    [data-theme="dark"] .cc-meta-ok   { color: #60a5fa; }
+    [data-theme="dark"] .cc-brief-ok,
+    [data-theme="dark"] .cc-meta-ok   { color: var(--accent); }
 
     .client-card-footer {
       display: flex;
@@ -182,8 +182,8 @@
       white-space: nowrap;
     }
     .copy-link-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--blue-lt); }
-    .copy-link-btn.copied { border-color: var(--green); color: #1a7a35; background: var(--green-lt); }
-    [data-theme="dark"] .copy-link-btn.copied { color: #4ade80; }
+    .copy-link-btn.copied { border-color: var(--green); color: var(--accent); background: var(--green-lt); }
+    [data-theme="dark"] .copy-link-btn.copied { color: var(--accent); }
 
     .client-delete-btn {
       position: absolute;

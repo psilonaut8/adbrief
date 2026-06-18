@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ad Performance Brief</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <script>if(localStorage.getItem('darkMode')==='1')document.documentElement.dataset.theme='dark'</script>
   <style>
@@ -17,7 +17,7 @@
       display: flex;
       align-items: center;
       padding: 0 24px;
-      background: rgba(255,255,255,0.9);
+      background: var(--topbar-bg);
       backdrop-filter: blur(20px) saturate(1.8);
       -webkit-backdrop-filter: blur(20px) saturate(1.8);
       border-bottom: 1px solid var(--sep);
@@ -25,7 +25,7 @@
       top: 0;
       z-index: 100;
     }
-    [data-theme="dark"] .view-topbar { background: rgba(28,28,30,0.92); }
+    [data-theme="dark"] .view-topbar { background: var(--topbar-bg); }
 
     .view-brand { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; color: var(--label); }
     .view-brand em { color: var(--accent); font-style: normal; }

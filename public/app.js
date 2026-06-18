@@ -821,8 +821,8 @@ function renderChartView() {
         }}}
       },
       scales: {
-        x: { grid: { color: dark ? 'rgba(255,255,255,0.06)' : 'rgba(60,60,67,0.06)' }, ticks: { font: { size: 11, family: 'Inter' }, color: dark ? 'rgba(235,235,245,0.55)' : undefined } },
-        y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Inter' }, color: dark ? 'rgba(235,235,245,0.55)' : '#3A3A3C' } }
+        x: { grid: { color: dark ? 'rgba(255,255,255,0.06)' : 'rgba(60,60,67,0.06)' }, ticks: { font: { size: 11, family: 'Nunito Sans' }, color: dark ? 'rgba(247,255,249,0.60)' : undefined } },
+        y: { grid: { display: false }, ticks: { font: { size: 11, family: 'Nunito Sans' }, color: dark ? 'rgba(247,255,249,0.60)' : '#3A3A3C' } }
       }
     }
   });
@@ -1014,10 +1014,10 @@ function renderTrendsChart() {
 
   const labels = trendsData.map(w => displayKey(w.week));
   const values = trendsData.map(w => w[trendsMetric]);
-  const colors = { roas: '#34C759', spend: '#1B6EF3', ctr: '#FF9500' };
-  const color = colors[trendsMetric] || '#1B6EF3';
+  const colors = { roas: '#00FF7A', spend: '#00D968', ctr: '#FFB84D' };
+  const color = colors[trendsMetric] || '#00FF7A';
   const gridColor = dark ? 'rgba(255,255,255,0.06)' : 'rgba(60,60,67,0.08)';
-  const tickColor = dark ? 'rgba(235,235,245,0.55)' : '#636366';
+  const tickColor = dark ? 'rgba(247,255,249,0.60)' : '#636366';
 
   trendsChart = new Chart(document.getElementById('trendsChart'), {
     type: 'line',
@@ -1048,8 +1048,8 @@ function renderTrendsChart() {
         }}}
       },
       scales: {
-        x: { grid: { color: gridColor }, ticks: { font: { size: 12, family: 'Inter' }, color: tickColor } },
-        y: { grid: { color: gridColor }, ticks: { font: { size: 12, family: 'Inter' }, color: tickColor } },
+        x: { grid: { color: gridColor }, ticks: { font: { size: 12, family: 'Nunito Sans' }, color: tickColor } },
+        y: { grid: { color: gridColor }, ticks: { font: { size: 12, family: 'Nunito Sans' }, color: tickColor } },
       }
     }
   });
