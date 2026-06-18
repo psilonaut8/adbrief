@@ -75,11 +75,11 @@ body {
 
 /* ── WAKE-UP BANNER ───────────────────────────────────────────────────────── */
 .wakeup-banner {
-  background: #fffbeb;
-  border-bottom: 1px solid rgba(255,149,0,.25);
-  padding: 9px 20px;
-  font-size: 13px;
-  color: #92400e;
+  background: #fff8e6;
+  border-bottom: 1px solid rgba(255,149,0,.18);
+  padding: 7px 20px;
+  font-size: 12.5px;
+  color: #8a4b05;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -376,7 +376,8 @@ body {
   gap: 4px;
   border: 1.5px dashed var(--sep);
   border-radius: var(--r-md);
-  padding: 20px 12px;
+  min-height: 124px;
+  padding: 18px 12px;
   cursor: pointer;
   text-align: center;
   background: var(--surface3);
@@ -386,9 +387,9 @@ body {
   border-color: var(--accent);
   background: var(--blue-lt);
 }
-.file-drop .drop-icon { font-size: 22px; margin-bottom: 4px; }
-.file-drop .drop-main { font-size: 13px; font-weight: 600; color: var(--label2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.file-drop .drop-sub  { font-size: 11px; color: var(--label4); }
+.file-drop .drop-icon { font-size: 20px; margin-bottom: 4px; }
+.file-drop .drop-main { font-size: 13px; font-weight: 600; color: var(--label2); overflow-wrap: anywhere; max-width: 100%; }
+.file-drop .drop-sub  { font-size: 11px; color: var(--label4); line-height: 1.35; max-width: 150px; }
 .file-drop.dragover .drop-main { color: var(--accent); }
 
 /* ── INPUTS ───────────────────────────────────────────────────────────────── */
@@ -1388,6 +1389,10 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   transition: color .15s;
 }
 .meta-change-btn:hover { color: var(--label3); }
+
+#metaImportRange {
+  margin-bottom: 0;
+}
 
 .meta-help {
   margin-bottom: 10px;

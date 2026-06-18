@@ -86,6 +86,31 @@ function firstRoasValue(...groups) {
   return null;
 }
 
+function hasMetaMetrics(ad) {
+  return ['spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm', 'reach', 'frequency', 'results', 'roas']
+    .some(key => ad[key] != null);
+}
+
+async function fetchPerAdInsights(metaAds, datePreset, token) {
+  const rows = [];
+  const accessToken = encodeURIComponent(token);
+  for (let i = 0; i < metaAds.length; i += 8) {
+    const batch = metaAds.slice(i, i + 8);
+    const settled = await Promise.allSettled(batch.map(async metaAd => {
+      const url = `https://graph.facebook.com/${META_API_VERSION}/${metaAd.id}/insights`
+        + '?fields=spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,purchase_roas,website_purchase_roas,date_start,date_stop'
+        + `&date_preset=${encodeURIComponent(datePreset)}`
+        + `&access_token=${accessToken}`;
+      const insightRows = await fetchMetaPages(url);
+      return insightRows.map(row => ({ ...row, ad_id: metaAd.id, ad_name: metaAd.name }));
+    }));
+    for (const result of settled) {
+      if (result.status === 'fulfilled') rows.push(...result.value);
+    }
+  }
+  return rows;
+}
+
 app.use(express.json());
 
 // Home page — serve client dashboard when no ?client= param
@@ -553,10 +578,15 @@ app.post('/meta/import', async (req, res) => {
       + `&date_preset=${encodeURIComponent(datePreset)}`
       + `&limit=500&access_token=${accessToken}`;
 
-    const [metaAds, insights] = await Promise.all([
+    const [metaAds, accountInsights] = await Promise.all([
       fetchMetaPages(adsUrl),
       fetchMetaPages(insightsUrl),
     ]);
+
+    const perAdInsights = accountInsights.length
+      ? []
+      : await fetchPerAdInsights(metaAds, datePreset, token);
+    const insights = accountInsights.length ? accountInsights : perAdInsights;
 
     const adLookup = {};
     for (const metaAd of metaAds) {
@@ -601,6 +631,7 @@ app.post('/meta/import', async (req, res) => {
         source: 'meta_api',
       };
     }).filter(ad => ad.adName);
+    const metricRows = ads.filter(hasMetaMetrics).length;
 
     const weekKey = clientKey(getClient(req), getWeekKey());
     if (!ads.length) {
@@ -613,9 +644,23 @@ app.post('/meta/import', async (req, res) => {
     existing.importedAt = new Date().toISOString();
     existing.importSource = 'meta_api';
     existing.metaDatePreset = datePreset;
+    existing.metaMetricRows = metricRows;
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, imported: ads.length, insightRows: insights.length, datePreset });
+    res.json({
+      ok: true,
+      weekKey,
+      imported: ads.length,
+      insightRows: insights.length,
+      accountInsightRows: accountInsights.length,
+      perAdInsightRows: perAdInsights.length,
+      metricRows,
+      hasMetrics: metricRows > 0,
+      datePreset,
+      message: metricRows > 0
+        ? null
+        : 'Meta returned ad names, but no performance stats for that range.',
+    });
   } catch (err) {
     console.error('Meta import error:', err);
     const status = err.status || (err.meta ? 400 : 500);

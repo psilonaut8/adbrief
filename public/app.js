@@ -10,6 +10,20 @@ function displayKey(key) {
   return key && key.includes('__') ? key.split('__').slice(1).join('__') : (key || '');
 }
 
+function hasUsableMetrics(ads) {
+  return (ads || []).some(ad =>
+    ['spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm', 'reach', 'frequency', 'results', 'roas']
+      .some(key => ad[key] != null && !isNaN(parseFloat(ad[key])))
+  );
+}
+
+function setFileDropCopy(main, sub) {
+  const mainEl = document.querySelector('.drop-main');
+  const subEl = document.querySelector('.drop-sub');
+  if (mainEl) mainEl.textContent = main;
+  if (subEl) subEl.textContent = sub;
+}
+
 // Show wake-up banner once per day
 (function() {
   const banner = document.getElementById('wakeupBanner');
@@ -17,10 +31,12 @@ function displayKey(key) {
   if (localStorage.getItem('wakeupDismissed') === today) {
     banner.style.display = 'none';
   } else {
-    document.getElementById('wakeupClose').onclick = () => {
+    const dismissWakeup = () => {
       banner.style.display = 'none';
       localStorage.setItem('wakeupDismissed', today);
     };
+    document.getElementById('wakeupClose').onclick = dismissWakeup;
+    setTimeout(dismissWakeup, 12000);
   }
 })();
 
@@ -141,7 +157,7 @@ async function uploadFiles(files) {
   setDot('ok', `${lastTotal} ads ready`);
   document.getElementById('generateBtn').disabled = false;
   document.getElementById('clearBtn').style.display = 'block';
-  document.querySelector('.drop-main').textContent = `${arr.length - skipped} of ${arr.length} files loaded`;
+  setFileDropCopy(`${arr.length - skipped} of ${arr.length} files loaded`, 'Spreadsheet import ready');
 }
 
 async function uploadFile(file) {
@@ -166,7 +182,7 @@ async function uploadFile(file) {
     setDot('ok', `${data.total} ads ready`);
     document.getElementById('generateBtn').disabled = false;
     document.getElementById('clearBtn').style.display = 'block';
-    document.querySelector('.drop-main').textContent = file.name;
+    setFileDropCopy(file.name, 'Spreadsheet import ready');
   } catch {
     setStatus('Upload failed. Please try again.', true);
     setDot('error', 'Upload failed');
@@ -214,7 +230,7 @@ function setupClearBtn() {
       setDot('idle', 'No data loaded');
       document.getElementById('generateBtn').disabled = true;
       document.getElementById('clearBtn').style.display = 'none';
-      document.querySelector('.drop-main').textContent = 'Drop file or click to browse';
+      setFileDropCopy('Drop files or click to browse', 'Any spreadsheet or export file');
       hide('briefOutput');
       hide('loading');
       show('emptyState');
@@ -254,9 +270,10 @@ async function loadCurrentWeek() {
     if (!data.week) return;
     currentWeekKey = data.weekKey;
     if (data.week.ads?.length) {
+      const hasMetrics = hasUsableMetrics(data.week.ads);
       setStatus(`${data.week.ads.length} ads loaded`);
-      setDot('ok', `${data.week.ads.length} ads ready`);
-      document.getElementById('generateBtn').disabled = false;
+      setDot(hasMetrics ? 'ok' : 'idle', hasMetrics ? `${data.week.ads.length} ads ready` : `${data.week.ads.length} names loaded`);
+      document.getElementById('generateBtn').disabled = !hasMetrics;
       document.getElementById('clearBtn').style.display = 'block';
     }
     if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments);
@@ -606,6 +623,16 @@ function renderDataSummary() {
   const el = document.getElementById('dataSummary');
   if (!el || !dataAds.length) { if (el) el.innerHTML = ''; return; }
 
+  if (!hasUsableMetrics(dataAds)) {
+    const firstAd = dataAds[0];
+    el.innerHTML = [
+      `<div class="ds-stat"><span class="ds-label">Ads</span><span class="ds-val">${dataAds.length}</span></div>`,
+      `<div class="ds-stat ds-top"><span class="ds-label">Metrics</span><span class="ds-val ds-topname">Not returned by Meta</span></div>`,
+      firstAd ? `<div class="ds-stat ds-top"><span class="ds-label">First Ad</span><span class="ds-val ds-topname" title="${esc(firstAd.adName)}">${esc(firstAd.adName.length > 32 ? firstAd.adName.slice(0, 32) + '...' : firstAd.adName)}</span></div>` : '',
+    ].join('');
+    return;
+  }
+
   const totalSpend = dataAds.reduce((s, a) => s + (a.spend || 0), 0);
   const ctrAds = dataAds.filter(a => a.ctr != null);
   const avgCtr = ctrAds.length ? ctrAds.reduce((s, a) => s + a.ctr, 0) / ctrAds.length : null;
@@ -823,6 +850,8 @@ function statusBadge(raw) {
     return `<span class="status-badge-pill status-active">Active</span>`;
   if (s.includes('paused'))
     return `<span class="status-badge-pill status-paused">Paused</span>`;
+  if (s === 'passed')
+    return `<span class="status-badge-pill status-active">Approved</span>`;
   if (s.includes('not deliver') || s.includes('not delivered'))
     return `<span class="status-badge-pill status-undelivered">Not delivered</span>`;
   if (s.includes('learning limited'))
@@ -1401,19 +1430,29 @@ async function setupMetaEnrich() {
       } else if (data.imported === 0) {
         setMetaStatus(data.message || 'No Meta ads found for that range.', 'warn');
       } else {
+        const hasMetrics = data.hasMetrics !== false;
         currentWeekKey = data.weekKey;
-        setMetaStatus(`${data.imported} ads imported from Meta.`, 'ok');
-        setStatus(`${data.imported} ads loaded from Meta`);
-        setDot('ok', `${data.imported} ads ready`);
-        document.getElementById('generateBtn').disabled = false;
+        if (hasMetrics) {
+          setMetaStatus(`${data.imported} ads imported from Meta.`, 'ok');
+          setStatus(`${data.imported} ads loaded from Meta`);
+          setDot('ok', `${data.imported} ads ready`);
+        } else {
+          setMetaStatus(data.message || `${data.imported} ad names imported, but Meta returned no stats.`, 'warn');
+          setStatus(`${data.imported} ad names loaded. No stats returned.`, true);
+          setDot('idle', `${data.imported} names loaded`);
+        }
+        document.getElementById('generateBtn').disabled = !hasMetrics;
         document.getElementById('clearBtn').style.display = 'block';
         hide('briefOutput');
         hide('loading');
         show('emptyState');
-        const dropMain = document.querySelector('.drop-main');
-        if (dropMain) dropMain.textContent = 'Meta import loaded';
+        setFileDropCopy(
+          hasMetrics ? 'Meta stats imported' : 'Meta names imported',
+          hasMetrics ? 'Ready to generate a brief' : 'No spend or performance stats returned'
+        );
         dataWeekSelectInitialized = false;
         await loadCurrentWeek();
+        document.getElementById('generateBtn').disabled = !hasMetrics;
         if (document.getElementById('panel-data')?.classList.contains('active')) {
           await loadDataTab();
         }
