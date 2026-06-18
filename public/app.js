@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupContextUpload();
   setupMetaEnrich();
   setupClientSwitcher();
+  setupSop();
   loadCurrentWeek();
   loadContextDocs();
 });
@@ -87,6 +88,7 @@ function setupTabs() {
 
       if (btn.dataset.panel === 'history') loadHistory();
       if (btn.dataset.panel === 'data') loadDataTab();
+      if (btn.dataset.panel === 'sop') loadSopTab();
       if (btn.dataset.panel === 'trends') loadTrendsTab();
     });
   });
@@ -557,6 +559,179 @@ function _drawComments() {
 }
 
 // ── DATA TAB ───────────────────────────────────────────────────────────────
+// SOP readout
+let sopSettingsLoaded = false;
+
+function setupSop() {
+  const saveBtn = document.getElementById('sopSaveBtn');
+  if (!saveBtn) return;
+  applySopSettings({ spendTier: 'lite', brandRegister: 'mainstream', activeStages: ['TOF'] });
+  if (isViewOnly) {
+    saveBtn.style.display = 'none';
+    document.querySelectorAll('#panel-sop input, #panel-sop select').forEach(el => { el.disabled = true; });
+    return;
+  }
+  saveBtn.addEventListener('click', saveSopSettings);
+}
+
+async function ensureSopSettings() {
+  if (sopSettingsLoaded) return;
+  try {
+    const res = await fetch('/sop/settings?client=' + CLIENT);
+    const data = await res.json();
+    applySopSettings(data.settings || {});
+    sopSettingsLoaded = true;
+  } catch { /* silent */ }
+}
+
+function applySopSettings(settings) {
+  document.getElementById('sopSpendTier').value = settings.spendTier || 'lite';
+  document.getElementById('sopBrandRegister').value = settings.brandRegister || 'mainstream';
+  document.getElementById('sopTargetCpa').value = settings.targetCpa ?? '';
+  document.getElementById('sopBaselineCtr').value = settings.baselineCtr ?? '';
+  const stages = new Set(settings.activeStages || ['TOF']);
+  document.querySelectorAll('.sop-stage').forEach(cb => { cb.checked = stages.has(cb.value); });
+}
+
+function collectSopSettings() {
+  return {
+    spendTier: document.getElementById('sopSpendTier').value,
+    brandRegister: document.getElementById('sopBrandRegister').value,
+    targetCpa: document.getElementById('sopTargetCpa').value || null,
+    baselineCtr: document.getElementById('sopBaselineCtr').value || null,
+    activeStages: [...document.querySelectorAll('.sop-stage:checked')].map(cb => cb.value),
+  };
+}
+
+async function saveSopSettings() {
+  const status = document.getElementById('sopSaveStatus');
+  status.textContent = 'Saving...';
+  try {
+    const res = await fetch('/sop/settings?client=' + CLIENT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(collectSopSettings()),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not save SOP settings');
+    applySopSettings(data.settings);
+    status.textContent = 'Creative rules saved.';
+    status.className = 'ctx-status ctx-ok';
+    await loadSopTab(true);
+  } catch (err) {
+    status.textContent = err.message || 'Could not save SOP settings.';
+    status.className = 'ctx-status ctx-warn';
+  }
+}
+
+async function loadSopTab(force) {
+  await ensureSopSettings();
+  const readoutEl = document.getElementById('sopReadout');
+  if (!readoutEl || (!force && !document.getElementById('panel-sop')?.classList.contains('active'))) return;
+
+  try {
+    const qs = new URLSearchParams({ client: CLIENT });
+    if (currentWeekKey) qs.set('weekKey', currentWeekKey);
+    const res = await fetch('/sop/readout?' + qs.toString());
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load SOP readout');
+    document.getElementById('sopWeekLabel').textContent = displayKey(data.weekKey);
+    renderSopReadout(data.readout);
+    if (data.readout.summary.adCount) {
+      hide('sopEmpty');
+      show('sopReadout');
+    } else {
+      show('sopEmpty');
+      hide('sopReadout');
+    }
+  } catch {
+    show('sopEmpty');
+    hide('sopReadout');
+  }
+}
+
+function renderSopReadout(readout) {
+  const el = document.getElementById('sopReadout');
+  const s = readout.summary;
+  const tier = readout.tier;
+  el.innerHTML = `
+    <div class="sop-metrics">
+      ${sopMetric('Target', `${readout.nextCreative.target} ads`)}
+      ${sopMetric('Present', s.adCount)}
+      ${sopMetric('Metrics', `${s.metricsCount}/${s.adCount}`)}
+      ${sopMetric('Winners', s.winners)}
+      ${sopMetric('Pause', s.pause)}
+      ${sopMetric('Need data', s.needsMoreDelivery)}
+    </div>
+    <div class="sop-section">
+      <h2>Definition of done</h2>
+      <div class="sop-checks">
+        ${readout.checks.map(check => `
+          <div class="sop-check ${check.ok ? 'ok' : 'warn'}">
+            <span>${check.ok ? 'OK' : '!'}</span>
+            <div><strong>${esc(check.label)}</strong><p>${esc(check.detail)}</p></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="sop-columns">
+      ${sopDecisionColumn('Winners / EVG candidates', readout.decisions.winners)}
+      ${sopDecisionColumn('Pause candidates', readout.decisions.pause)}
+      ${sopDecisionColumn('Needs more delivery', readout.decisions.needsMoreDelivery)}
+    </div>
+    <div class="sop-section">
+      <h2>Next creative request</h2>
+      <p class="sop-muted">${esc(tier.label)} target: ${tier.adsPerWeek} ads/week, roughly ${tier.fresh} fresh and ${tier.iterations} iterations.</p>
+      <div class="sop-next-grid">
+        ${readout.nextCreative.concepts.map(c => `
+          <div class="sop-next-card">
+            <div class="sop-pill">${esc(c.stage)}</div>
+            <strong>${esc(c.angle)} / ${esc(c.format)}</strong>
+            <p>${esc(c.count)} asset${c.count === 1 ? '' : 's'} - ${esc(c.note)}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="sop-section">
+      <h2>SOP gaps</h2>
+      ${renderSopGaps(readout.gaps)}
+    </div>
+  `;
+}
+
+function sopMetric(label, value) {
+  return `<div class="ds-stat"><span class="ds-label">${esc(label)}</span><span class="ds-val">${esc(value)}</span></div>`;
+}
+
+function sopDecisionColumn(title, ads) {
+  return `
+    <div class="sop-decision-col">
+      <h3>${esc(title)}</h3>
+      ${ads.length ? ads.map(ad => `
+        <div class="sop-ad-row">
+          <strong>${esc(ad.adName || 'Unnamed ad')}</strong>
+          <p>${esc(ad.reason || '')}</p>
+          <span>${ad.ctr != null ? `CTR ${fmtPct(ad.ctr)}` : ''}${ad.spend != null ? ` - Spend ${fmtNum(ad.spend, '$')}` : ''}${ad.results != null ? ` - Results ${fmtInt(ad.results)}` : ''}</span>
+        </div>
+      `).join('') : '<p class="empty-note">None yet.</p>'}
+    </div>
+  `;
+}
+
+function renderSopGaps(gaps) {
+  const missing = gaps.missingFields || [];
+  const formatIssues = gaps.formatIssues || [];
+  const stageText = gaps.missingStages?.length ? `Missing stage coverage: ${gaps.missingStages.join(', ')}.` : '';
+  if (!missing.length && !formatIssues.length && !stageText) return '<p class="empty-note">No obvious SOP gaps detected.</p>';
+  return `
+    <div class="sop-gap-list">
+      ${stageText ? `<div class="sop-gap">${esc(stageText)}</div>` : ''}
+      ${formatIssues.map(i => `<div class="sop-gap">${esc(i.level)}: ${esc(i.format)} on ${esc(i.adName || 'unnamed ad')}</div>`).join('')}
+      ${missing.map(m => `<div class="sop-gap">${esc(m.adName || 'Unnamed ad')} missing ${esc(m.missing.join(', '))}</div>`).join('')}
+    </div>
+  `;
+}
+
 let dataAds = [];
 let dataSortCol = null;
 let dataSortAsc = true;
@@ -1216,7 +1391,7 @@ function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
 
 function esc(str) {
-  if (!str) return '';
+  if (str == null) return '';
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');

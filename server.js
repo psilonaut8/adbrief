@@ -8,7 +8,8 @@ const crypto = require('crypto');
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
 const { parseContextFile } = require('./lib/context-parser');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveClient, listClients, findClientByToken, deleteClient } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveSopSettings, loadSopSettings, saveClient, listClients, findClientByToken, deleteClient } = require('./lib/storage');
+const { normalizeSettings, buildSopReadout } = require('./lib/sop');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
@@ -331,6 +332,39 @@ app.get('/trends', async (req, res) => {
       });
     }
     res.json({ ok: true, weeks: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Client-level SOP settings used for weekly creative readouts
+app.get('/sop/settings', async (req, res) => {
+  try {
+    const settings = normalizeSettings(await loadSopSettings(getClient(req)) || {});
+    res.json({ ok: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/sop/settings', async (req, res) => {
+  try {
+    const settings = normalizeSettings(req.body || {});
+    await saveSopSettings(getClient(req), settings);
+    res.json({ ok: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/sop/readout', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const weekKey = req.query.weekKey ? String(req.query.weekKey) : clientKey(client, getWeekKey());
+    const week = await loadWeek(weekKey);
+    const settings = normalizeSettings(await loadSopSettings(client) || {});
+    const readout = buildSopReadout(week?.ads || [], settings);
+    res.json({ ok: true, weekKey, readout });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

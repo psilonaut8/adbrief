@@ -35,6 +35,7 @@
     <nav class="tabnav">
       <button class="tab active" data-panel="brief">Brief</button>
       <button class="tab" data-panel="data">Data</button>
+      <button class="tab" data-panel="sop">SOP</button>
       <button class="tab" data-panel="history">History</button>
       <button class="tab" data-panel="trends">Trends</button>
       <button class="tab" data-panel="howto">How to Use</button>
@@ -286,6 +287,72 @@
             </div>
             <div id="cardView" class="card-grid hidden"></div>
             <div id="chartView" class="chart-wrap hidden"><div class="chart-legend" id="adChartLegend"></div><canvas id="adChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOP PANEL -->
+      <div class="panel-view" id="panel-sop">
+        <div class="content-header">
+          <div>
+            <h1>SOP Readout</h1>
+            <div class="content-meta" id="sopWeekLabel"></div>
+          </div>
+        </div>
+
+        <div class="sop-layout">
+          <div class="data-card sop-settings-card">
+            <div class="sop-card-head">
+              <div>
+                <h2>Client creative rules</h2>
+                <p>Used to judge this week and brief the next batch.</p>
+              </div>
+              <button class="btn-primary sop-save-btn" id="sopSaveBtn">Save rules</button>
+            </div>
+
+            <div class="sop-form-grid">
+              <label>
+                <span class="slabel">Spend tier</span>
+                <select class="input" id="sopSpendTier">
+                  <option value="lite">Lite / Starter - 5 ads/week</option>
+                  <option value="growth">Growth / Standard - 10 ads/week</option>
+                  <option value="scale">Scale / Flagship - 15 ads/week</option>
+                </select>
+              </label>
+              <label>
+                <span class="slabel">Brand register</span>
+                <select class="input" id="sopBrandRegister">
+                  <option value="premium">Premium / Authority</option>
+                  <option value="mainstream">Mainstream / Mixed</option>
+                  <option value="casual">Casual / Creator</option>
+                </select>
+              </label>
+              <label>
+                <span class="slabel">Target CPA</span>
+                <input class="input" id="sopTargetCpa" type="number" min="0" step="0.01" placeholder="Optional">
+              </label>
+              <label>
+                <span class="slabel">Baseline CTR %</span>
+                <input class="input" id="sopBaselineCtr" type="number" min="0" step="0.01" placeholder="Optional">
+              </label>
+            </div>
+
+            <div class="sop-stage-row">
+              <span class="slabel">Active funnel stages</span>
+              <label><input type="checkbox" class="sop-stage" value="TOF"> TOF</label>
+              <label><input type="checkbox" class="sop-stage" value="MOF"> MOF</label>
+              <label><input type="checkbox" class="sop-stage" value="BOF"> BOF</label>
+            </div>
+            <div class="ctx-status" id="sopSaveStatus"></div>
+          </div>
+
+          <div class="data-card" id="sopReadoutCard">
+            <div class="empty-state" id="sopEmpty">
+              <div class="empty-icon">📋</div>
+              <div class="empty-title">No SOP readout yet</div>
+              <div class="empty-sub">Import ads first, then this screen will turn the SOP into weekly decisions.</div>
+            </div>
+            <div id="sopReadout" class="hidden"></div>
           </div>
         </div>
       </div>
