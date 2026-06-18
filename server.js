@@ -111,6 +111,20 @@ async function fetchPerAdInsights(metaAds, datePreset, token) {
   return rows;
 }
 
+function pickCreativeImage(creative) {
+  if (!creative) return null;
+  const candidates = [
+    ['image_url', creative.image_url],
+    ['link_picture', creative.object_story_spec?.link_data?.picture],
+    ['photo_url', creative.object_story_spec?.photo_data?.url],
+    ['video_image_url', creative.object_story_spec?.video_data?.image_url],
+    ...(creative.asset_feed_spec?.images || []).map(image => ['asset_image_url', image.url]),
+    ['thumbnail_url', creative.thumbnail_url],
+  ].filter(([, url]) => Boolean(url));
+  if (!candidates.length) return null;
+  return { url: candidates[0][1], source: candidates[0][0] };
+}
+
 app.use(express.json());
 
 // Home page — serve client dashboard when no ?client= param
@@ -570,7 +584,7 @@ app.post('/meta/import', async (req, res) => {
     const accessToken = encodeURIComponent(token);
 
     const adsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/ads`
-      + '?fields=id,name,effective_status,configured_status,creative{thumbnail_url,image_url}'
+      + '?fields=id,name,effective_status,configured_status,creative{image_url,thumbnail_url,object_story_spec,asset_feed_spec}'
       + `&limit=500&access_token=${accessToken}`;
     const insightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/insights`
       + '?level=ad'
@@ -600,6 +614,7 @@ app.post('/meta/import', async (req, res) => {
     const ads = rows.map(row => {
       const adId = String(row.ad_id || row.id || '');
       const metaAd = adLookup[adId] || {};
+      const creativeImage = pickCreativeImage(metaAd.creative);
       const result = firstActionValue(row.actions, [
         'purchase',
         'omni_purchase',
@@ -627,7 +642,8 @@ app.post('/meta/import', async (req, res) => {
         dateStart: row.date_start || null,
         dateEnd: row.date_stop || null,
         adStatus: metaAd.effective_status || metaAd.configured_status || null,
-        imageUrl: metaAd.creative?.thumbnail_url || metaAd.creative?.image_url || null,
+        imageUrl: creativeImage?.url || null,
+        imageSource: creativeImage?.source || null,
         source: 'meta_api',
       };
     }).filter(ad => ad.adName);
@@ -686,7 +702,7 @@ app.post('/meta/enrich', async (req, res) => {
     // Pull all ads with creative thumbnail/image URLs, handling pagination
     const metaAds = [];
     let url = `https://graph.facebook.com/v19.0/${actId}/ads`
-            + `?fields=id,name,creative{thumbnail_url,image_url}`
+            + `?fields=id,name,creative{image_url,thumbnail_url,object_story_spec,asset_feed_spec}`
             + `&limit=200`
             + `&access_token=${encodeURIComponent(token)}`;
 
@@ -708,10 +724,10 @@ app.post('/meta/enrich', async (req, res) => {
     const byId   = {};
     const byName = {};
     for (const ma of metaAds) {
-      const thumb = ma.creative?.thumbnail_url || ma.creative?.image_url || null;
-      if (thumb) {
-        byId[String(ma.id)] = thumb;
-        byName[String(ma.name || '').toLowerCase()] = thumb;
+      const image = pickCreativeImage(ma.creative);
+      if (image?.url) {
+        byId[String(ma.id)] = image.url;
+        byName[String(ma.name || '').toLowerCase()] = image.url;
       }
     }
 
