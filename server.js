@@ -102,7 +102,7 @@ async function fetchPerAdInsights(metaAds, datePreset, token) {
         + `&date_preset=${encodeURIComponent(datePreset)}`
         + `&access_token=${accessToken}`;
       const insightRows = await fetchMetaPages(url);
-      return insightRows.map(row => ({ ...row, ad_id: metaAd.id, ad_name: metaAd.name }));
+      return insightRows.map(row => ({ ...row, ad_id: metaAd.id, ad_name: pickAdDisplayName(metaAd.name, metaAd) }));
     }));
     for (const result of settled) {
       if (result.status === 'fulfilled') rows.push(...result.value);
@@ -123,6 +123,53 @@ function pickCreativeImage(creative) {
   ].filter(([, url]) => Boolean(url));
   if (!candidates.length) return null;
   return { url: candidates[0][1], source: candidates[0][0] };
+}
+
+function compactCreativeText(value) {
+  if (!value) return null;
+  const text = String(value).replace(/\s+/g, ' ').trim();
+  if (!text) return null;
+  return text.length > 90 ? text.slice(0, 87).trim() + '...' : text;
+}
+
+function isGenericMetaAdName(name) {
+  const normalized = String(name || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  return normalized === 'ad'
+    || normalized === 'ongoing local business promotion ad'
+    || normalized === 'ongoing local business promotion'
+    || normalized === 'local business promotion ad'
+    || normalized === 'local business promotion';
+}
+
+function pickCreativeText(creative) {
+  if (!creative) return null;
+  const story = creative.object_story_spec || {};
+  const asset = creative.asset_feed_spec || {};
+  const candidates = [
+    story.link_data?.message,
+    story.link_data?.name,
+    story.link_data?.description,
+    story.photo_data?.caption,
+    story.video_data?.message,
+    story.video_data?.title,
+    story.template_data?.message,
+    story.template_data?.name,
+    ...(asset.bodies || []).map(body => body.text),
+    ...(asset.titles || []).map(title => title.text),
+    ...(asset.descriptions || []).map(description => description.text),
+  ];
+  for (const candidate of candidates) {
+    const text = compactCreativeText(candidate);
+    if (text) return text;
+  }
+  return null;
+}
+
+function pickAdDisplayName(rowName, metaAd) {
+  const fallbackName = rowName || metaAd?.name || metaAd?.id || '';
+  const creativeText = pickCreativeText(metaAd?.creative);
+  if (creativeText && isGenericMetaAdName(fallbackName)) return `Post: "${creativeText}"`;
+  return fallbackName;
 }
 
 app.use(express.json());
@@ -609,7 +656,7 @@ app.post('/meta/import', async (req, res) => {
 
     const rows = insights.length
       ? insights
-      : metaAds.map(ad => ({ ad_id: ad.id, ad_name: ad.name }));
+      : metaAds.map(ad => ({ ad_id: ad.id, ad_name: pickAdDisplayName(ad.name, ad) }));
 
     const ads = rows.map(row => {
       const adId = String(row.ad_id || row.id || '');
@@ -627,7 +674,7 @@ app.post('/meta/import', async (req, res) => {
 
       return {
         adId,
-        adName: row.ad_name || metaAd.name || adId,
+        adName: pickAdDisplayName(row.ad_name, metaAd) || adId,
         spend: metaNumber(row.spend),
         impressions: metaNumber(row.impressions),
         clicks: metaNumber(row.clicks),
