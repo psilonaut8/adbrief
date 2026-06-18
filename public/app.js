@@ -592,6 +592,7 @@ async function loadDataTab(weekKey) {
     document.getElementById('thResults').style.display = hasResults ? '' : 'none';
     hide('dataEmpty');
     document.getElementById('dataTableWrap').classList.remove('hidden');
+    document.getElementById('cardSortBar').classList.toggle('hidden', dataView !== 'cards' || !hasUsableMetrics(dataAds));
     if (!dataTabInitialized) {
       setupDataSort();
       setupViewToggle();
@@ -629,6 +630,7 @@ function renderDataSummary() {
       `<div class="ds-stat"><span class="ds-label">Ads</span><span class="ds-val">${dataAds.length}</span></div>`,
       `<div class="ds-stat ds-top"><span class="ds-label">Metrics</span><span class="ds-val ds-topname">Not returned by Meta</span></div>`,
       firstAd ? `<div class="ds-stat ds-top"><span class="ds-label">First Ad</span><span class="ds-val ds-topname" title="${esc(firstAd.adName)}">${esc(firstAd.adName.length > 32 ? firstAd.adName.slice(0, 32) + '...' : firstAd.adName)}</span></div>` : '',
+      `<div class="ds-note">Meta gave AdBrief ad names and creatives, but no spend, clicks, impressions, or rate metrics for this range. Use an Ads Manager export if those historical stats are visible there.</div>`,
     ].join('');
     return;
   }
@@ -675,7 +677,7 @@ function setupViewToggle() {
       document.getElementById('cardView').classList.toggle('hidden', dataView !== 'cards');
       document.getElementById('chartView').classList.toggle('hidden', dataView !== 'chart');
       document.getElementById('chartMetricBar').classList.toggle('hidden', dataView !== 'chart');
-      document.getElementById('cardSortBar').classList.toggle('hidden', dataView !== 'cards');
+      document.getElementById('cardSortBar').classList.toggle('hidden', dataView !== 'cards' || !hasUsableMetrics(dataAds));
       renderCurrentDataView();
     });
   });
@@ -689,17 +691,18 @@ function setupViewToggle() {
 }
 
 function renderCardView() {
+  const showMetrics = hasUsableMetrics(dataAds);
   const ads = [...dataAds].sort((a, b) => {
     const av = parseFloat(a[cardSortCol]) || 0;
     const bv = parseFloat(b[cardSortCol]) || 0;
     return cardSortAsc ? av - bv : bv - av;
   });
   document.getElementById('cardView').innerHTML = ads.map((ad, i) => `
-    <div class="ad-data-card" data-adidx="${i}" style="cursor:pointer">
+    <div class="ad-data-card${showMetrics ? '' : ' names-only'}" data-adidx="${i}" style="cursor:pointer">
       ${ad.imageUrl ? `<div class="adc-thumb"><img src="${esc(ad.imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : ''}
       <div class="adc-top">${formatBadge(ad.format)}${ad.adStatus ? statusBadge(ad.adStatus) : ''}</div>
       <div class="adc-name">${esc(ad.adName || '—')}</div>
-      <div class="adc-metrics">
+      ${showMetrics ? `<div class="adc-metrics">
         ${ad.results != null ? `<div class="adc-metric adc-metric-wide">
           <span class="adc-label">${esc(ad.resultType || 'Results')}</span>
           <span class="adc-value">${Math.round(ad.results).toLocaleString()}</span>
@@ -720,7 +723,7 @@ function renderCardView() {
           <span class="adc-label">Clicks</span>
           <span class="adc-value">${fmtInt(ad.clicks)}</span>
         </div>
-      </div>
+      </div>` : `<div class="adc-note">No performance stats returned</div>`}
     </div>
   `).join('');
 

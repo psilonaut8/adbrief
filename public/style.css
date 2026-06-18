@@ -996,9 +996,9 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 14px 0 16px;
+  padding: 18px 18px 16px;
   border-bottom: 1px solid var(--sep2);
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 .data-summary:empty { display: none; }
 .ds-stat {
@@ -1031,6 +1031,13 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.ds-note {
+  flex-basis: 100%;
+  color: var(--label3);
+  font-size: 12px;
+  line-height: 1.45;
+  margin-top: 2px;
 }
 
 /* ── DATA TOOLBAR & VIEW TOGGLE ───────────────────────────────────────────── */
@@ -1101,8 +1108,8 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-  padding: 16px;
+  gap: 14px;
+  padding: 18px;
 }
 
 .ad-data-card {
@@ -1124,6 +1131,9 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   overflow: hidden;
   height: 130px;
   background: var(--surface2);
+}
+.ad-data-card.names-only .adc-thumb {
+  height: 112px;
 }
 .adc-thumb img {
   width: 100%;
@@ -1347,6 +1357,14 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   font-size: 12px;
   font-weight: 600;
   color: #1a7a35;
+}
+.adc-note {
+  color: var(--label3);
+  font-size: 12px;
+  line-height: 1.35;
+  background: var(--surface2);
+  border-radius: var(--r-sm);
+  padding: 9px 10px;
 }
 [data-theme="dark"] .meta-connected-badge {
   background: rgba(52,199,89,0.1);
