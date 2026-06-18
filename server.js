@@ -21,6 +21,71 @@ function clientKey(client, baseKey) {
   return client ? `${client}__${baseKey}` : baseKey;
 }
 
+const META_API_VERSION = 'v19.0';
+const META_DATE_PRESETS = new Set(['last_7d', 'last_14d', 'last_30d', 'this_month', 'last_month']);
+
+async function getMetaAuth(req) {
+  const stored = await loadMetaCredentials(getClient(req));
+  const token = (stored?.token && stored.token !== '') ? stored.token : (req.body.token || process.env.META_ACCESS_TOKEN);
+  const accountId = (stored?.accountId && stored.accountId !== '') ? stored.accountId : (req.body.accountId || process.env.META_ACCOUNT_ID);
+  if (!token) {
+    const err = new Error('No access token saved. Enter your Meta access token and save it first.');
+    err.status = 400;
+    throw err;
+  }
+  if (!accountId) {
+    const err = new Error('No ad account ID saved. Enter your account ID and save it first.');
+    err.status = 400;
+    throw err;
+  }
+  return {
+    token,
+    actId: accountId.startsWith('act_') ? accountId : `act_${accountId}`,
+  };
+}
+
+async function fetchMetaPages(startUrl) {
+  const rows = [];
+  let url = startUrl;
+  while (url) {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) {
+      const err = new Error(data.error.message || 'Meta API error');
+      err.meta = data.error;
+      throw err;
+    }
+    if (Array.isArray(data.data)) rows.push(...data.data);
+    url = data.paging?.next || null;
+  }
+  return rows;
+}
+
+function metaNumber(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+function firstActionValue(rows, preferredTypes) {
+  if (!Array.isArray(rows)) return { value: null, type: null };
+  for (const type of preferredTypes) {
+    const found = rows.find(r => r.action_type === type);
+    const value = metaNumber(found?.value);
+    if (value != null) return { value, type };
+  }
+  const fallback = rows.find(r => metaNumber(r.value) != null);
+  return fallback ? { value: metaNumber(fallback.value), type: fallback.action_type || null } : { value: null, type: null };
+}
+
+function firstRoasValue(...groups) {
+  for (const group of groups) {
+    const picked = firstActionValue(group, ['purchase', 'omni_purchase', 'offsite_conversion.fb_pixel_purchase']);
+    if (picked.value != null) return picked.value;
+  }
+  return null;
+}
+
 app.use(express.json());
 
 // Home page — serve client dashboard when no ?client= param
@@ -469,6 +534,92 @@ app.delete('/meta/credentials', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Import Meta ad-level insights and creative thumbnails into the current AdBrief week.
+app.post('/meta/import', async (req, res) => {
+  try {
+    const { token, actId } = await getMetaAuth(req);
+    const datePreset = META_DATE_PRESETS.has(req.body?.datePreset) ? req.body.datePreset : 'last_30d';
+    const accessToken = encodeURIComponent(token);
+
+    const adsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/ads`
+      + '?fields=id,name,effective_status,configured_status,creative{thumbnail_url,image_url}'
+      + `&limit=500&access_token=${accessToken}`;
+    const insightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/insights`
+      + '?level=ad'
+      + '&fields=ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,purchase_roas,website_purchase_roas,date_start,date_stop'
+      + `&date_preset=${encodeURIComponent(datePreset)}`
+      + `&limit=500&access_token=${accessToken}`;
+
+    const [metaAds, insights] = await Promise.all([
+      fetchMetaPages(adsUrl),
+      fetchMetaPages(insightsUrl),
+    ]);
+
+    const adLookup = {};
+    for (const metaAd of metaAds) {
+      adLookup[String(metaAd.id)] = metaAd;
+    }
+
+    const rows = insights.length
+      ? insights
+      : metaAds.map(ad => ({ ad_id: ad.id, ad_name: ad.name }));
+
+    const ads = rows.map(row => {
+      const adId = String(row.ad_id || row.id || '');
+      const metaAd = adLookup[adId] || {};
+      const result = firstActionValue(row.actions, [
+        'purchase',
+        'omni_purchase',
+        'offsite_conversion.fb_pixel_purchase',
+        'lead',
+        'onsite_conversion.lead_grouped',
+        'complete_registration',
+        'link_click',
+      ]);
+
+      return {
+        adId,
+        adName: row.ad_name || metaAd.name || adId,
+        spend: metaNumber(row.spend),
+        impressions: metaNumber(row.impressions),
+        clicks: metaNumber(row.clicks),
+        ctr: metaNumber(row.ctr),
+        cpc: metaNumber(row.cpc),
+        cpm: metaNumber(row.cpm),
+        reach: metaNumber(row.reach),
+        frequency: metaNumber(row.frequency),
+        results: result.value,
+        resultType: result.type,
+        roas: firstRoasValue(row.purchase_roas, row.website_purchase_roas),
+        dateStart: row.date_start || null,
+        dateEnd: row.date_stop || null,
+        adStatus: metaAd.effective_status || metaAd.configured_status || null,
+        imageUrl: metaAd.creative?.thumbnail_url || metaAd.creative?.image_url || null,
+        source: 'meta_api',
+      };
+    }).filter(ad => ad.adName);
+
+    const weekKey = clientKey(getClient(req), getWeekKey());
+    if (!ads.length) {
+      return res.json({ ok: true, imported: 0, weekKey, message: 'No Meta ads found for that date range.' });
+    }
+
+    const existing = await loadWeek(weekKey) || {};
+    existing.ads = ads;
+    existing.brief = null;
+    existing.importedAt = new Date().toISOString();
+    existing.importSource = 'meta_api';
+    existing.metaDatePreset = datePreset;
+    await saveWeek(weekKey, existing);
+
+    res.json({ ok: true, weekKey, imported: ads.length, insightRows: insights.length, datePreset });
+  } catch (err) {
+    console.error('Meta import error:', err);
+    const status = err.status || (err.meta ? 400 : 500);
+    res.status(status).json({ error: err.message, meta: err.meta || null });
   }
 });
 

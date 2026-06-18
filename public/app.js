@@ -1326,6 +1326,8 @@ async function setupClientSwitcher() {
 // ── META API THUMBNAIL ENRICHMENT ──────────────────────────────────────────
 async function setupMetaEnrich() {
   const enrichBtn = document.getElementById('metaEnrichBtn');
+  const importBtn = document.getElementById('metaImportBtn');
+  const rangeSel  = document.getElementById('metaImportRange');
   const changeBtn = document.getElementById('metaChangeBtn');
   const status    = document.getElementById('metaStatus');
   const connected = document.getElementById('metaConnected');
@@ -1382,6 +1384,50 @@ async function setupMetaEnrich() {
     }
   }
 
+  async function doImport() {
+    importBtn.disabled = true;
+    enrichBtn.disabled = true;
+    importBtn.textContent = 'Importing...';
+    setMetaStatus('', '');
+    try {
+      const r = await fetch('/meta/import?client=' + CLIENT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ datePreset: rangeSel?.value || 'last_30d' }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) {
+        setMetaStatus(data.error || 'Meta import failed.', 'error');
+      } else if (data.imported === 0) {
+        setMetaStatus(data.message || 'No Meta ads found for that range.', 'warn');
+      } else {
+        currentWeekKey = data.weekKey;
+        setMetaStatus(`${data.imported} ads imported from Meta.`, 'ok');
+        setStatus(`${data.imported} ads loaded from Meta`);
+        setDot('ok', `${data.imported} ads ready`);
+        document.getElementById('generateBtn').disabled = false;
+        document.getElementById('clearBtn').style.display = 'block';
+        hide('briefOutput');
+        hide('loading');
+        show('emptyState');
+        const dropMain = document.querySelector('.drop-main');
+        if (dropMain) dropMain.textContent = 'Meta import loaded';
+        dataWeekSelectInitialized = false;
+        await loadCurrentWeek();
+        if (document.getElementById('panel-data')?.classList.contains('active')) {
+          await loadDataTab();
+        }
+      }
+    } catch {
+      setMetaStatus('Network error. Check your connection.', 'error');
+    } finally {
+      importBtn.disabled = false;
+      enrichBtn.disabled = false;
+      importBtn.textContent = 'Import ads + stats';
+    }
+  }
+
+  if (importBtn) importBtn.addEventListener('click', doImport);
   enrichBtn.addEventListener('click', doEnrich);
 
   changeBtn.addEventListener('click', async () => {

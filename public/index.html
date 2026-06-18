@@ -93,6 +93,15 @@
             <span class="meta-connected-label">Connected</span>
             <span class="meta-account-hint" id="metaAccountHint"></span>
           </div>
+          <label class="slabel" for="metaImportRange" style="margin-top:12px;margin-bottom:6px">Import range</label>
+          <select class="input" id="metaImportRange">
+            <option value="last_7d">Last 7 days</option>
+            <option value="last_14d">Last 14 days</option>
+            <option value="last_30d" selected>Last 30 days</option>
+            <option value="this_month">This month</option>
+            <option value="last_month">Last month</option>
+          </select>
+          <button class="btn-primary" id="metaImportBtn" style="width:100%;margin-top:8px">Import ads + stats</button>
           <button class="btn-outline" id="metaEnrichBtn" style="width:100%;margin-top:10px">Fetch thumbnails</button>
           <button class="meta-change-btn" id="metaChangeBtn">Use different credentials</button>
         </div>
