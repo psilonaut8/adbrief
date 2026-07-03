@@ -52,7 +52,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] `DELETE /comment` and `PUT /comment` fail with 401 when logged out.
 - [ ] With `APP_PASSWORD` unset locally, app behaves exactly as before (no login required).
 
-## T2 — Fix the Monday data-loss trap (week rollover) · Status: TODO
+## T2 — Fix the Monday data-loss trap (week rollover) · Status: DONE (2026-07-03, 410c5f8, verified)
 
 **Problem:** All reads/writes key on the *current* ISO week. Data uploaded Friday appears "gone" on Monday because the week key rolled over.
 
