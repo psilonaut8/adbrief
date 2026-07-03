@@ -219,7 +219,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 
 # Phase 4 — Hardening & performance
 
-## T11 — Comment integrity: IDs, caps, rate limit · Status: TODO
+## T11 — Comment integrity: IDs, caps, rate limit · Status: DONE (2026-07-04, 5eb08cc, verified)
 
 **Files:** `server.js`, `public/app.js`, `public/view.html`.
 
