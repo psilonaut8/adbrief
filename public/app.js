@@ -827,15 +827,61 @@ function renderDataSummary() {
   }
 
   const totalSpend = dataAds.reduce((s, a) => s + (a.spend || 0), 0);
-  const ctrAds = dataAds.filter(a => a.ctr != null);
-  const avgCtr = ctrAds.length ? ctrAds.reduce((s, a) => s + a.ctr, 0) / ctrAds.length : null;
-  const cpmAds = dataAds.filter(a => a.cpm != null);
-  const avgCpm = cpmAds.length ? cpmAds.reduce((s, a) => s + a.cpm, 0) / cpmAds.length : null;
-  const roasAds = dataAds.filter(a => a.roas != null);
-  const avgRoas = roasAds.length ? roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length : null;
+
+  // Avg CTR: weighted by clicks/impressions where both non-null; fall back to unweighted mean of ctr.
+  const ctrWeightedAds = dataAds.filter(a => a.clicks != null && a.impressions != null);
+  const ctrImpressionsSum = ctrWeightedAds.reduce((s, a) => s + a.impressions, 0);
+  let avgCtr = null;
+  if (ctrWeightedAds.length && ctrImpressionsSum > 0) {
+    avgCtr = (ctrWeightedAds.reduce((s, a) => s + a.clicks, 0) / ctrImpressionsSum) * 100;
+  } else {
+    const ctrAds = dataAds.filter(a => a.ctr != null);
+    avgCtr = ctrAds.length ? ctrAds.reduce((s, a) => s + a.ctr, 0) / ctrAds.length : null;
+  }
+
+  // Avg CPM: weighted by spend/impressions where both non-null; fall back to unweighted mean of cpm.
+  const cpmWeightedAds = dataAds.filter(a => a.spend != null && a.impressions != null);
+  const cpmImpressionsSum = cpmWeightedAds.reduce((s, a) => s + a.impressions, 0);
+  let avgCpm = null;
+  if (cpmWeightedAds.length && cpmImpressionsSum > 0) {
+    avgCpm = (cpmWeightedAds.reduce((s, a) => s + a.spend, 0) / cpmImpressionsSum) * 1000;
+  } else {
+    const cpmAds = dataAds.filter(a => a.cpm != null);
+    avgCpm = cpmAds.length ? cpmAds.reduce((s, a) => s + a.cpm, 0) / cpmAds.length : null;
+  }
+
+  // Avg ROAS: spend-weighted where both non-null; fall back to unweighted mean.
+  const roasWeightedAds = dataAds.filter(a => a.roas != null && a.spend != null);
+  const roasSpendSum = roasWeightedAds.reduce((s, a) => s + a.spend, 0);
+  let avgRoas = null;
+  if (roasWeightedAds.length && roasSpendSum > 0) {
+    avgRoas = roasWeightedAds.reduce((s, a) => s + a.roas * a.spend, 0) / roasSpendSum;
+  } else {
+    const roasAds = dataAds.filter(a => a.roas != null);
+    avgRoas = roasAds.length ? roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length : null;
+  }
+
+  // Results: group by resultType, show the dominant type's total.
   const resultsAds = dataAds.filter(a => a.results != null);
-  const totalResults = resultsAds.length ? resultsAds.reduce((s, a) => s + a.results, 0) : null;
-  const resultLabel = resultsAds.length && resultsAds[0].resultType ? resultsAds[0].resultType : 'Results';
+  let totalResults = null;
+  let resultLabel = 'Results';
+  let resultTitle = '';
+  let resultSuffix = '';
+  if (resultsAds.length) {
+    const byType = new Map();
+    resultsAds.forEach(a => {
+      const type = a.resultType || 'Results';
+      byType.set(type, (byType.get(type) || 0) + a.results);
+    });
+    const sortedTypes = [...byType.entries()].sort((a, b) => b[1] - a[1]);
+    resultLabel = sortedTypes[0][0];
+    totalResults = sortedTypes[0][1];
+    if (sortedTypes.length > 1) {
+      resultSuffix = ` <span class="ds-suffix">+${sortedTypes.length - 1} types</span>`;
+      resultTitle = sortedTypes.map(([t, v]) => `${t}: ${Math.round(v).toLocaleString()}`).join(', ');
+    }
+  }
+
   const topAd = [...dataAds].sort((a, b) => (b.spend || 0) - (a.spend || 0))[0];
 
   const stat = (label, val) => val != null
@@ -845,7 +891,7 @@ function renderDataSummary() {
   el.innerHTML = [
     stat('Total Spend', '$' + totalSpend.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })),
     stat('Ads', dataAds.length),
-    totalResults != null ? stat(resultLabel, Math.round(totalResults).toLocaleString()) : '',
+    totalResults != null ? `<div class="ds-stat"${resultTitle ? ` title="${esc(resultTitle)}"` : ''}><span class="ds-label">${esc(resultLabel)}</span><span class="ds-val">${Math.round(totalResults).toLocaleString()}${resultSuffix}</span></div>` : '',
     avgRoas != null ? stat('Avg ROAS', avgRoas.toFixed(2)) : '',
     avgCtr  != null ? stat('Avg CTR',  avgCtr.toFixed(2) + '%') : '',
     avgCpm  != null ? stat('Avg CPM',  '$' + avgCpm.toFixed(2)) : '',

@@ -396,13 +396,34 @@ app.get('/trends', async (req, res) => {
       if (!week?.ads?.length) continue;
       const ads = week.ads;
       const spend = ads.reduce((s, a) => s + (parseFloat(a.spend) || 0), 0);
-      const roasAds = ads.filter(a => a.roas != null);
-      const ctrAds  = ads.filter(a => a.ctr  != null);
+
+      // Weighted CTR: Sigma clicks / Sigma impressions, fallback to unweighted mean of ctr.
+      const ctrWeightedAds = ads.filter(a => a.clicks != null && a.impressions != null);
+      const ctrImpressionsSum = ctrWeightedAds.reduce((s, a) => s + a.impressions, 0);
+      let ctr = null;
+      if (ctrWeightedAds.length && ctrImpressionsSum > 0) {
+        ctr = (ctrWeightedAds.reduce((s, a) => s + a.clicks, 0) / ctrImpressionsSum) * 100;
+      } else {
+        const ctrAds = ads.filter(a => a.ctr != null);
+        ctr = ctrAds.length ? ctrAds.reduce((s, a) => s + a.ctr, 0) / ctrAds.length : null;
+      }
+
+      // Spend-weighted ROAS: Sigma(roas*spend) / Sigma(spend), fallback to unweighted mean.
+      const roasWeightedAds = ads.filter(a => a.roas != null && a.spend != null);
+      const roasSpendSum = roasWeightedAds.reduce((s, a) => s + a.spend, 0);
+      let roas = null;
+      if (roasWeightedAds.length && roasSpendSum > 0) {
+        roas = roasWeightedAds.reduce((s, a) => s + a.roas * a.spend, 0) / roasSpendSum;
+      } else {
+        const roasAds = ads.filter(a => a.roas != null);
+        roas = roasAds.length ? roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length : null;
+      }
+
       result.push({
         week: wk,
         spend:    Math.round(spend),
-        roas:     roasAds.length ? Math.round(roasAds.reduce((s, a) => s + a.roas, 0) / roasAds.length * 100) / 100 : null,
-        ctr:      ctrAds.length  ? Math.round(ctrAds.reduce((s, a)  => s + a.ctr,  0) / ctrAds.length  * 100) / 100 : null,
+        roas:     roas != null ? Math.round(roas * 100) / 100 : null,
+        ctr:      ctr  != null ? Math.round(ctr  * 100) / 100 : null,
         adCount:  ads.length,
       });
     }
