@@ -85,7 +85,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] Week with brief + import → confirm dialog appears; Cancel leaves brief intact; OK replaces data and clears brief.
 - [ ] Week without brief → imports with no dialog (unchanged behavior).
 
-## T4 — Harden brief generation (JSON mode, retry, context cap, W53) · Status: TODO
+## T4 — Harden brief generation (JSON mode, retry, context cap, W53) · Status: DONE (2026-07-03, 55eb3e6, verified)
 
 **Files:** `lib/brief.js`, `lib/storage.js`, `server.js`.
 
