@@ -1607,7 +1607,7 @@ async function setupMetaEnrich() {
     }
   }
 
-  async function doImport() {
+  async function doImport(force) {
     importBtn.disabled = true;
     enrichBtn.disabled = true;
     importBtn.textContent = 'Importing...';
@@ -1616,9 +1616,18 @@ async function setupMetaEnrich() {
       const r = await fetch('/meta/import?client=' + CLIENT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ datePreset: rangeSel?.value || 'last_30d' }),
+        body: JSON.stringify({ datePreset: rangeSel?.value || 'last_30d', force: !!force }),
       });
       const data = await r.json();
+      if (r.status === 409 && data.needsConfirm) {
+        importBtn.disabled = false;
+        enrichBtn.disabled = false;
+        importBtn.textContent = 'Import ads + stats';
+        if (confirm(data.message + ' Continue?')) {
+          await doImport(true);
+        }
+        return;
+      }
       if (!r.ok || !data.ok) {
         setMetaStatus(data.error || 'Meta import failed.', 'error');
       } else if (data.imported === 0) {

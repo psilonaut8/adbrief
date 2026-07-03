@@ -732,6 +732,18 @@ app.delete('/meta/credentials', async (req, res) => {
 app.post('/meta/import', async (req, res) => {
   try {
     const { token, actId } = await getMetaAuth(req);
+
+    const weekKey = clientKey(getClient(req), getWeekKey());
+    if (req.body?.force !== true) {
+      const existingWeek = await loadWeek(weekKey);
+      if (existingWeek?.brief) {
+        return res.status(409).json({
+          needsConfirm: true,
+          message: 'This week already has a generated brief. Importing will replace the data and delete the brief.',
+        });
+      }
+    }
+
     const datePreset = META_DATE_PRESETS.has(req.body?.datePreset) ? req.body.datePreset : 'last_30d';
     const accessToken = encodeURIComponent(token);
 
@@ -801,7 +813,6 @@ app.post('/meta/import', async (req, res) => {
     }).filter(ad => ad.adName);
     const metricRows = ads.filter(hasMetaMetrics).length;
 
-    const weekKey = clientKey(getClient(req), getWeekKey());
     if (!ads.length) {
       return res.json({ ok: true, imported: 0, weekKey, message: 'No Meta ads found for that date range.' });
     }
