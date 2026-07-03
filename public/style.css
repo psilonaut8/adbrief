@@ -420,6 +420,16 @@ h1, h2, h3,
 .file-drop .drop-sub  { font-size: 11px; color: var(--label4); line-height: 1.35; max-width: 150px; }
 .file-drop.dragover .drop-main { color: var(--accent); }
 
+.replace-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--label3);
+  cursor: pointer;
+}
+
 /* ── INPUTS ───────────────────────────────────────────────────────────────── */
 .input {
   width: 100%;

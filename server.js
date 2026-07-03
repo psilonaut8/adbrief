@@ -23,6 +23,30 @@ function clientKey(client, baseKey) {
   return client ? `${client}__${baseKey}` : baseKey;
 }
 
+// Merge freshly parsed ads into the previously stored ads for a week.
+// mode 'replace' discards all previous ads; default 'merge' updates matching
+// adNames in place (keeping the old imageUrl if the new row has none),
+// keeps unmatched old rows, and appends genuinely new names.
+function mergeAds(prevAds, newAds, mode) {
+  if (mode === 'replace') {
+    return { ads: newAds, added: newAds.length, updated: 0 };
+  }
+  const prevByName = new Map(prevAds.map(a => [a.adName, a]));
+  let updated = 0;
+  const seen = new Set();
+  const ads = prevAds.map(old => {
+    const fresh = prevByName.has(old.adName) ? newAds.find(a => a.adName === old.adName) : null;
+    if (fresh && !seen.has(old.adName)) {
+      seen.add(old.adName);
+      updated++;
+      return { ...fresh, imageUrl: fresh.imageUrl ?? old.imageUrl };
+    }
+    return old;
+  });
+  const added = newAds.filter(a => !prevByName.has(a.adName));
+  return { ads: [...ads, ...added], added: added.length, updated };
+}
+
 const META_API_VERSION = 'v19.0';
 const META_DATE_PRESETS = new Set(['last_7d', 'last_14d', 'last_30d', 'this_month', 'last_month', 'maximum']);
 
@@ -243,13 +267,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     const weekKey = clientKey(getClient(req), getWeekKey());
     const existing = await loadWeek(weekKey) || {};
     const prev = existing.ads || [];
-    const prevNames = new Set(prev.map(a => a.adName));
-    const merged = [...prev, ...ads.filter(a => !prevNames.has(a.adName))];
+    const mode = req.body.mode === 'replace' ? 'replace' : 'merge';
+    const { ads: merged, added, updated } = mergeAds(prev, ads, mode);
     existing.ads = merged;
     existing.uploadedAt = new Date().toISOString();
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, added: merged.length - prev.length, total: merged.length, columns: parsed.columns || null });
+    res.json({ ok: true, weekKey, added, updated, total: merged.length, columns: parsed.columns || null });
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: err.message });
@@ -273,13 +297,13 @@ app.post('/sheets', async (req, res) => {
     const weekKey = clientKey(getClient(req), getWeekKey());
     const existing = await loadWeek(weekKey) || {};
     const prev = existing.ads || [];
-    const prevNames = new Set(prev.map(a => a.adName));
-    const merged = [...prev, ...ads.filter(a => !prevNames.has(a.adName))];
+    const mode = req.body.mode === 'replace' ? 'replace' : 'merge';
+    const { ads: merged, added, updated } = mergeAds(prev, ads, mode);
     existing.ads = merged;
     existing.uploadedAt = new Date().toISOString();
     await saveWeek(weekKey, existing);
 
-    res.json({ ok: true, weekKey, added: merged.length - prev.length, total: merged.length, columns: parsed.columns || null });
+    res.json({ ok: true, weekKey, added, updated, total: merged.length, columns: parsed.columns || null });
   } catch (err) {
     console.error('Sheets error:', err);
     res.status(500).json({ error: err.message });

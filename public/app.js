@@ -129,13 +129,16 @@ async function uploadFiles(files) {
   const arr = [...files];
   if (arr.length === 1) { await uploadFile(arr[0]); return; }
 
-  let totalAdded = 0, lastTotal = 0, skipped = 0;
+  const replaceChecked = document.getElementById('replaceMode')?.checked;
+  let totalAdded = 0, totalUpdated = 0, lastTotal = 0, skipped = 0;
   for (let i = 0; i < arr.length; i++) {
     setStatus(`Uploading ${i + 1} of ${arr.length}…`);
     setDot('working', `Uploading ${i + 1}/${arr.length}…`);
     const form = new FormData();
     form.append('file', arr[i]);
     form.append('client', CLIENT);
+    // Only the first file in a batch may replace; later files must merge onto it.
+    if (replaceChecked && i === 0) form.append('mode', 'replace');
     try {
       const res = await fetch('/upload', { method: 'POST', body: form });
       const data = await res.json();
@@ -146,6 +149,7 @@ async function uploadFiles(files) {
       }
       currentWeekKey = data.weekKey;
       totalAdded += data.added || 0;
+      totalUpdated += data.updated || 0;
       lastTotal = data.total;
       if (data.columns) {
         console.log(`[AdBrief] ${arr[i].name} — columns:`, data.columns.fromFile);
@@ -164,7 +168,8 @@ async function uploadFiles(files) {
   }
 
   const skipNote = skipped ? ` (${skipped} file${skipped > 1 ? 's' : ''} skipped)` : '';
-  const msg = `${lastTotal} ads loaded from ${arr.length - skipped} file${arr.length - skipped !== 1 ? 's' : ''}${skipNote}`;
+  const updatedNote = totalUpdated ? `, ${totalUpdated} updated` : '';
+  const msg = `${totalAdded} added${updatedNote} — ${lastTotal} total${skipNote}`;
   setStatus(msg);
   setDot('ok', `${lastTotal} ads ready`);
   document.getElementById('generateBtn').disabled = false;
@@ -178,6 +183,7 @@ async function uploadFile(file) {
   const form = new FormData();
   form.append('file', file);
   form.append('client', CLIENT);
+  if (document.getElementById('replaceMode')?.checked) form.append('mode', 'replace');
   try {
     const res = await fetch('/upload', { method: 'POST', body: form });
     const data = await res.json();
@@ -187,8 +193,9 @@ async function uploadFile(file) {
       console.log('[AdBrief] Columns detected from file:', data.columns.fromFile);
       if (data.columns.unrecognized.length) console.warn('[AdBrief] Unrecognized columns (ignored):', data.columns.unrecognized);
     }
-    const msg = data.total > data.added
-      ? `${data.added} ads added — ${data.total} total`
+    const updatedNote = data.updated ? `, ${data.updated} updated` : '';
+    const msg = data.total > data.added || data.updated
+      ? `${data.added} added${updatedNote} — ${data.total} total`
       : `${data.added} ads loaded`;
     setStatus(msg);
     setDot('ok', `${data.total} ads ready`);
@@ -209,16 +216,18 @@ function setupSheetsLoad() {
     setStatus('Fetching sheet…');
     setDot('working', 'Fetching sheet…');
     try {
+      const mode = document.getElementById('replaceMode')?.checked ? 'replace' : undefined;
       const res = await fetch('/sheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, client: CLIENT }),
+        body: JSON.stringify({ url, client: CLIENT, mode }),
       });
       const data = await res.json();
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Load failed'); return; }
       currentWeekKey = data.weekKey;
-      const msg = data.total > data.added
-        ? `${data.added} ads added — ${data.total} total`
+      const updatedNote = data.updated ? `, ${data.updated} updated` : '';
+      const msg = data.total > data.added || data.updated
+        ? `${data.added} added${updatedNote} — ${data.total} total`
         : `${data.added} ads loaded`;
       setStatus(msg);
       setDot('ok', `${data.total} ads ready`);
