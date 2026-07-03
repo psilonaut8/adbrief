@@ -161,6 +161,8 @@
           <p>Analysing your ads and writing the brief…</p>
         </div>
 
+        <div id="briefLoadError"></div>
+
         <!-- Brief output -->
         <div id="briefOutput" class="hidden">
           <div class="content-header">
@@ -229,6 +231,7 @@
           <h1>History</h1>
         </div>
         <div id="historyGrid" class="history-grid"></div>
+        <div id="historyLoadError"></div>
         <div class="empty-state hidden" id="historyEmpty">
           <div class="empty-icon">🗂️</div>
           <div class="empty-title">No history yet</div>
@@ -251,6 +254,7 @@
             <div class="empty-title">No data for this week</div>
             <div class="empty-sub">Upload a Meta export on the Brief tab first.</div>
           </div>
+          <div id="dataLoadError"></div>
           <div id="dataTableWrap" class="hidden">
             <div class="data-summary" id="dataSummary"></div>
             <div class="data-toolbar">
@@ -362,6 +366,7 @@
               <div class="empty-title">No SOP readout yet</div>
               <div class="empty-sub">Import ads first, then this screen will turn the SOP into weekly decisions.</div>
             </div>
+            <div id="sopLoadError"></div>
             <div id="sopReadout" class="hidden"></div>
           </div>
         </div>
@@ -377,6 +382,7 @@
           <div class="empty-title">Not enough data yet</div>
           <div class="empty-sub">Generate briefs for at least 2 weeks to see trends.</div>
         </div>
+        <div id="trendsLoadError"></div>
         <div id="trendsContent" class="hidden">
           <div class="data-card" style="margin-bottom:12px">
             <div class="data-toolbar">

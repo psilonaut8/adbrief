@@ -288,6 +288,8 @@ async function loadCurrentWeek() {
   try {
     const res = await fetch('/week/current?client=' + CLIENT);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load brief');
+    document.getElementById('briefLoadError').innerHTML = '';
     if (!data.week) return;
     currentWeekKey = data.weekKey;
     if (data.week.ads?.length) {
@@ -304,7 +306,11 @@ async function loadCurrentWeek() {
       hide('staleWeekBanner');
     }
     if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments);
-  } catch { /* silent */ }
+  } catch {
+    hide('loading');
+    hide('emptyState');
+    renderLoadError('briefLoadError', loadCurrentWeek);
+  }
 }
 
 // ── RENDER BRIEF ───────────────────────────────────────────────────────────
@@ -374,9 +380,11 @@ async function loadHistory() {
   const grid = document.getElementById('historyGrid');
   const empty = document.getElementById('historyEmpty');
   grid.innerHTML = '';
+  document.getElementById('historyLoadError').innerHTML = '';
   try {
     const res = await fetch('/history?client=' + CLIENT);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load history');
     if (!data.weeks.length) { show('historyEmpty'); return; }
     hide('historyEmpty');
     grid.innerHTML = data.weeks.map(w => `
@@ -414,7 +422,10 @@ async function loadHistory() {
         }
       });
     });
-  } catch { empty.classList.remove('hidden'); }
+  } catch {
+    hide('historyEmpty');
+    renderLoadError('historyLoadError', loadHistory);
+  }
 }
 
 async function loadWeek(weekKey) {
@@ -646,6 +657,7 @@ async function loadSopTab(force) {
   const readoutEl = document.getElementById('sopReadout');
   if (!readoutEl || (!force && !document.getElementById('panel-sop')?.classList.contains('active'))) return;
 
+  document.getElementById('sopLoadError').innerHTML = '';
   try {
     const qs = new URLSearchParams({ client: CLIENT });
     if (currentWeekKey) qs.set('weekKey', currentWeekKey);
@@ -662,8 +674,9 @@ async function loadSopTab(force) {
       hide('sopReadout');
     }
   } catch {
-    show('sopEmpty');
+    hide('sopEmpty');
     hide('sopReadout');
+    renderLoadError('sopLoadError', () => loadSopTab());
   }
 }
 
@@ -770,6 +783,8 @@ async function loadDataTab(weekKey) {
     const url = weekKey ? `/week/${encodeURIComponent(weekKey)}` : `/week/current?client=${CLIENT}`;
     const res  = await fetch(url);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load data');
+    document.getElementById('dataLoadError').innerHTML = '';
 
     // Sync the select to whichever week was loaded
     const sel = document.getElementById('dataWeekSelect');
@@ -801,7 +816,11 @@ async function loadDataTab(weekKey) {
     }
     renderDataSummary();
     renderCurrentDataView();
-  } catch { /* silent */ }
+  } catch {
+    hide('dataEmpty');
+    document.getElementById('dataTableWrap').classList.add('hidden');
+    renderLoadError('dataLoadError', () => loadDataTab());
+  }
 }
 
 async function populateDataWeekSelect() {
@@ -1219,9 +1238,11 @@ let trendsMetric = 'roas';
 let trendsData = [];
 
 async function loadTrendsTab() {
+  document.getElementById('trendsLoadError').innerHTML = '';
   try {
     const res = await fetch('/trends?client=' + CLIENT);
     const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Could not load trends');
     trendsData = json.weeks || [];
     if (trendsData.length < 2) {
       show('trendsEmpty');
@@ -1233,7 +1254,11 @@ async function loadTrendsTab() {
     setupTrendsMetricBtns();
     renderTrendsChart();
     renderTrendsTable();
-  } catch { show('trendsEmpty'); hide('trendsContent'); }
+  } catch {
+    hide('trendsEmpty');
+    hide('trendsContent');
+    renderLoadError('trendsLoadError', loadTrendsTab);
+  }
 }
 
 function setupTrendsMetricBtns() {
@@ -1453,6 +1478,13 @@ function setDot(state, text) {
 function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
 function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
 
+function renderLoadError(containerId, retryFn) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="load-error">Couldn't load this. <button class="btn-outline">Retry</button></div>`;
+  el.querySelector('.load-error button').addEventListener('click', () => retryFn());
+}
+
 function esc(str) {
   if (str == null) return '';
   return String(str)
@@ -1519,8 +1551,11 @@ async function loadContextDocs() {
   try {
     const res = await fetch('/context?client=' + CLIENT);
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load context files');
     renderContextList(data.docs || []);
-  } catch { /* silent */ }
+  } catch {
+    renderLoadError('ctxList', loadContextDocs);
+  }
 }
 
 function renderContextList(docs) {
