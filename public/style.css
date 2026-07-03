@@ -742,6 +742,17 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 .ad-item.red    { background: var(--red-lt);    border-color: rgba(255,77,77,.3); }
 .ad-item.blue   { background: var(--blue-lt);   border-color: rgba(0,255,122,.25); }
 
+.ad-item-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  float: left;
+  margin-right: 10px;
+}
+.ad-item.clickable { cursor: pointer; }
+.ad-item.clickable:hover { background: var(--surface); }
+
 .ad-metric {
   display: inline-block;
   font-size: 11px;

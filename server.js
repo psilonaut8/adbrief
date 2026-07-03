@@ -700,6 +700,10 @@ app.get('/api/view/:token', async (req, res) => {
     const weekData = await loadWeek(latest);
     const weekKey  = latest.includes('__') ? latest.split('__').slice(1).join('__') : latest;
 
+    const adImages = (weekData?.ads || [])
+      .filter(a => a.imageUrl != null)
+      .map(a => ({ adName: a.adName, imageUrl: a.imageUrl }));
+
     res.json({
       clientName: client.name,
       weekKey:    latest,   // full key needed for comment endpoints
@@ -707,6 +711,7 @@ app.get('/api/view/:token', async (req, res) => {
       brief:      weekData?.brief   || null,
       comments:   weekData?.comments || [],
       adCount:    weekData?.ads?.length || 0,
+      adImages,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

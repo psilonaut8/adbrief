@@ -1,6 +1,7 @@
 const isViewOnly = new URLSearchParams(location.search).get('role') === 'summary';
 const CLIENT = (new URLSearchParams(location.search).get('client') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
 let currentWeekKey = null;
+let weekAds = [];
 let darkMode = localStorage.getItem('darkMode') === '1';
 let briefView = 'grid';
 let cardSortCol = 'roas';
@@ -15,6 +16,26 @@ function hasUsableMetrics(ads) {
     ['spend', 'impressions', 'clicks', 'ctr', 'cpc', 'cpm', 'reach', 'frequency', 'results', 'roas']
       .some(key => ad[key] != null && !isNaN(parseFloat(ad[key])))
   );
+}
+
+function findAdByName(name) {
+  if (!name) return null;
+  const lower = String(name).toLowerCase();
+  let hit = weekAds.find(a => a.adName && a.adName.toLowerCase() === lower);
+  if (hit) return hit;
+  const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const target = norm(name);
+  if (!target) return null;
+  hit = weekAds.find(a => norm(a.adName) === target);
+  if (hit) return hit;
+  hit = weekAds.find(a => {
+    const adNorm = norm(a.adName);
+    if (!adNorm) return false;
+    const shorter = adNorm.length <= target.length ? adNorm : target;
+    const longer  = adNorm.length <= target.length ? target : adNorm;
+    return shorter.length >= 10 && longer.includes(shorter);
+  });
+  return hit || null;
 }
 
 function setFileDropCopy(main, sub) {
@@ -247,6 +268,7 @@ function setupClearBtn() {
     try {
       await fetch('/week/current/ads?client=' + CLIENT, { method: 'DELETE' });
       currentWeekKey = null;
+      weekAds = [];
       setStatus('');
       setDot('idle', 'No data loaded');
       document.getElementById('generateBtn').disabled = true;
@@ -274,6 +296,11 @@ function setupGenerateBtn() {
       currentWeekKey = data.weekKey;
       setDot('ok', 'Brief ready');
       renderBrief(data.brief, data.weekKey);
+      try {
+        const wres = await fetch('/week/current?client=' + CLIENT);
+        const wdata = await wres.json();
+        if (wres.ok && wdata.week) weekAds = wdata.week.ads || [];
+      } catch { /* thumbnails just won't show until next load */ }
     } catch {
       hide('loading');
       setStatus('Brief generation failed.', true);
@@ -292,6 +319,7 @@ async function loadCurrentWeek() {
     document.getElementById('briefLoadError').innerHTML = '';
     if (!data.week) return;
     currentWeekKey = data.weekKey;
+    weekAds = data.week.ads || [];
     if (data.week.ads?.length) {
       const hasMetrics = hasUsableMetrics(data.week.ads);
       setStatus(`${data.week.ads.length} ads loaded`);
@@ -371,8 +399,26 @@ function renderAdList(id, items, color, tpl) {
     if (countEl) countEl.textContent = '';
     return;
   }
-  el.innerHTML = items.map(i => `<div class="ad-item ${color}">${tpl(i)}</div>`).join('');
+  const modalAds = [...weekAds];
+  el.innerHTML = items.map(i => {
+    const match = i.adName ? findAdByName(i.adName) : null;
+    const thumb = match?.imageUrl
+      ? `<img class="ad-item-thumb" src="${esc(match.imageUrl)}" alt="" onerror="this.style.display='none'">`
+      : '';
+    const clickable = match ? ' clickable' : '';
+    return `<div class="ad-item ${color}${clickable}">${thumb}${tpl(i)}</div>`;
+  }).join('');
   if (countEl) countEl.textContent = items.length;
+  // Wire click handlers by re-walking items in lockstep with rendered cards
+  const cards = el.querySelectorAll('.ad-item');
+  items.forEach((i, idx) => {
+    const match = i.adName ? findAdByName(i.adName) : null;
+    if (!match) return;
+    const modalIdx = modalAds.indexOf(match);
+    if (modalIdx === -1) return;
+    const card = cards[idx];
+    card.addEventListener('click', () => openAdModal(modalAds, modalIdx));
+  });
 }
 
 // ── HISTORY ────────────────────────────────────────────────────────────────
@@ -443,6 +489,7 @@ async function loadWeek(weekKey) {
     const data = await res.json();
     hide('loading');
     if (!res.ok || !data.week?.brief) { show('emptyState'); return; }
+    weekAds = data.week.ads || [];
     renderBrief(data.week.brief, weekKey, data.week.comments);
   } catch { hide('loading'); show('emptyState'); }
 }

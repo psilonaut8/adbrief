@@ -170,6 +170,27 @@
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    let viewAdImages = [];
+    function findAdByName(name) {
+      if (!name) return null;
+      const lower = String(name).toLowerCase();
+      let hit = viewAdImages.find(a => a.adName && a.adName.toLowerCase() === lower);
+      if (hit) return hit;
+      const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const target = norm(name);
+      if (!target) return null;
+      hit = viewAdImages.find(a => norm(a.adName) === target);
+      if (hit) return hit;
+      hit = viewAdImages.find(a => {
+        const adNorm = norm(a.adName);
+        if (!adNorm) return false;
+        const shorter = adNorm.length <= target.length ? adNorm : target;
+        const longer  = adNorm.length <= target.length ? target : adNorm;
+        return shorter.length >= 10 && longer.includes(shorter);
+      });
+      return hit || null;
+    }
+
     function formatTime(iso) {
       if (!iso) return '';
       const d = new Date(iso);
@@ -204,6 +225,7 @@
 
         viewWeekKey  = data.weekKey;
         viewComments = data.comments || [];
+        viewAdImages = data.adImages || [];
 
         main.innerHTML = renderView(data);
         wireComments();
@@ -281,7 +303,12 @@
 
     function adCard(a, why, action, metric, color) {
       const name = a.adName || a.concept || '';
+      const match = a.adName ? findAdByName(a.adName) : null;
+      const thumb = match?.imageUrl
+        ? `<img class="ad-item-thumb" src="${esc(match.imageUrl)}" alt="" onerror="this.style.display='none'">`
+        : '';
       return `<div class="ad-item ${color || ''}">
+        ${thumb}
         ${metric ? `<span class="ad-metric">${esc(metric)}</span>` : ''}
         <div class="ad-name">${esc(name)}</div>
         ${why    ? `<div class="ad-why">${esc(why)}</div>` : ''}
