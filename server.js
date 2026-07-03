@@ -314,9 +314,13 @@ app.post('/generate-brief', async (req, res) => {
 
     const historySummary = await getRecentHistory(weekKey, 4);
     const contextDocs = await loadContextDocs(getClient(req));
-    const contextText = contextDocs.length
-      ? contextDocs.map(d => `--- ${d.name} ---\n${d.text}`).join('\n\n')
+    const CONTEXT_DOC_CAP = 4000;
+    const CONTEXT_BLOCK_CAP = 12000;
+    const truncate = (text, cap) => text.length > cap ? text.slice(0, cap) + '\n[truncated]' : text;
+    let contextText = contextDocs.length
+      ? contextDocs.map(d => `--- ${d.name} ---\n${truncate(d.text, CONTEXT_DOC_CAP)}`).join('\n\n')
       : null;
+    if (contextText) contextText = truncate(contextText, CONTEXT_BLOCK_CAP);
     const result = await generateBrief(week.ads, historySummary, contextText);
 
     if (!result.ok) {
