@@ -125,7 +125,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] CSV mixing `Leads` and `Link Clicks` result types → summary shows the dominant type, not a mixed sum.
 - [ ] Trends chart still renders; values change only where weighting differs.
 
-## T6 — Upload semantics: update on re-upload, optional replace · Status: TODO
+## T6 — Upload semantics: update on re-upload, optional replace · Status: DONE (2026-07-03, c6c2eaa, verified)
 
 **Problem:** `/upload` and `/sheets` skip rows whose `adName` already exists, so re-uploading a corrected export does nothing.
 
