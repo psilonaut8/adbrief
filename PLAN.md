@@ -249,7 +249,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] 20MB file upload → clean 400 message, server stays up.
 - [ ] `/history` and `/clients` return the same lists as before the query change (compare against a pre-change response).
 
-## T13 — Thumbnail persistence (Meta CDN URLs expire) · Status: TODO
+## T13 — Thumbnail persistence (Meta CDN URLs expire) · Status: DONE (2026-07-04, 711f160, verified — ALL PLAN TASKS COMPLETE)
 
 **Problem:** Stored `imageUrl`s are signed Meta CDN links that die after days/weeks; historical weeks silently lose their images.
 
