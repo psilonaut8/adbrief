@@ -71,7 +71,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] With current-week data present → no banner, behavior unchanged.
 - [ ] `POST /generate-brief` with a weekKey belonging to a different client prefix → 400.
 
-## T3 — Stop Meta import from silently destroying briefs · Status: TODO
+## T3 — Stop Meta import from silently destroying briefs · Status: DONE (2026-07-03, 0833771 + review fix 6b7a9fe, verified)
 
 **Problem:** `POST /meta/import` sets `existing.brief = null` and replaces ads even when a generated (possibly client-shared) brief exists.
 
