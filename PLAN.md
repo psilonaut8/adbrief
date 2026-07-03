@@ -234,7 +234,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] 11th comment within a minute from one IP → 429.
 - [ ] Oversized author/text rejected with a readable error shown in the UI alert.
 
-## T12 — API hygiene: token handling, limits, timeouts, indexed queries · Status: TODO
+## T12 — API hygiene: token handling, limits, timeouts, indexed queries · Status: DONE (2026-07-04, 3cb6e40, verified)
 
 **Files:** `server.js`, `lib/storage.js`.
 
@@ -272,4 +272,5 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 
 (Executors: note unrelated bugs here instead of fixing them.)
 
-- `lib/storage.js` exports `getPreviousWeekSummary` — appears unused by `server.js`; T4 may remove it after confirming no callers.
+- `lib/storage.js` exports `getPreviousWeekSummary` — appears unused by `server.js`; T4 may remove it after confirming no callers. (Resolved: removed in T4.)
+- Found during T12 review: a CSV just UNDER the 15MB multer cap (~14.9MB) crashes `parseBuffer`/XLSX with an opaque Node buffer error → 500 `"The value of \"offset\" is out of range..."`. Pre-existing (not a T12 regression). Candidate fix: wrap parseBuffer errors with a friendly 400 ("File could not be parsed — try a smaller export") in the /upload and /sheets handlers.
