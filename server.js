@@ -299,7 +299,14 @@ app.delete('/week/current/ads', async (req, res) => {
 // Generate a brief from the current week's data
 app.post('/generate-brief', async (req, res) => {
   try {
-    const weekKey = clientKey(getClient(req), getWeekKey());
+    const client = getClient(req);
+    let weekKey = clientKey(client, getWeekKey());
+    if (req.body.weekKey) {
+      const requested = String(req.body.weekKey);
+      const valid = client ? requested.startsWith(`${client}__`) : !requested.includes('__');
+      if (!valid) return res.status(400).json({ error: 'weekKey does not belong to this client.' });
+      weekKey = requested;
+    }
     const week = await loadWeek(weekKey);
     if (!week || !week.ads || !week.ads.length) {
       return res.status(400).json({ error: 'No data for this week. Upload a file or load from Sheets first.' });
@@ -330,9 +337,24 @@ app.post('/generate-brief', async (req, res) => {
 // Get current week's data and brief
 app.get('/week/current', async (req, res) => {
   try {
-    const weekKey = clientKey(getClient(req), getWeekKey());
-    const week = await loadWeek(weekKey);
-    res.json({ weekKey, week: week || null });
+    const client = getClient(req);
+    const currentWeekKey = clientKey(client, getWeekKey());
+    const week = await loadWeek(currentWeekKey);
+    if (week?.ads?.length) {
+      return res.json({ weekKey: currentWeekKey, week, isCurrentWeek: true });
+    }
+
+    // Current week has no ads — fall back to the most recent week that has data
+    const keys = await listWeeks(client);
+    for (const key of keys.slice(0, 8)) {
+      if (key === currentWeekKey) continue;
+      const candidate = await loadWeek(key);
+      if (candidate?.ads?.length) {
+        return res.json({ weekKey: key, week: candidate, isCurrentWeek: false, currentWeekKey });
+      }
+    }
+
+    res.json({ weekKey: currentWeekKey, week: week || null, isCurrentWeek: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

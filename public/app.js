@@ -67,6 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSop();
   loadCurrentWeek();
   loadContextDocs();
+
+  document.getElementById('staleWeekClose')?.addEventListener('click', () => hide('staleWeekBanner'));
 });
 
 // ── TOP TABS ───────────────────────────────────────────────────────────────
@@ -256,7 +258,7 @@ function setupGenerateBtn() {
     show('loading');
     setDot('working', 'Generating brief…');
     try {
-      const res = await fetch('/generate-brief', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: CLIENT }) });
+      const res = await fetch('/generate-brief', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client: CLIENT, weekKey: currentWeekKey }) });
       const data = await res.json();
       hide('loading');
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Failed'); show('emptyState'); return; }
@@ -285,6 +287,12 @@ async function loadCurrentWeek() {
       setDot(hasMetrics ? 'ok' : 'idle', hasMetrics ? `${data.week.ads.length} ads ready` : `${data.week.ads.length} names loaded`);
       document.getElementById('generateBtn').disabled = !hasMetrics;
       document.getElementById('clearBtn').style.display = 'block';
+    }
+    if (data.isCurrentWeek === false) {
+      document.getElementById('staleWeekLabel').textContent = displayKey(data.weekKey);
+      show('staleWeekBanner');
+    } else {
+      hide('staleWeekBanner');
     }
     if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments);
   } catch { /* silent */ }

@@ -118,6 +118,14 @@ h1, h2, h3,
 }
 .wakeup-close:hover { opacity: 1; }
 .wakeup-refresh { color: var(--accent); font-weight: 700; text-underline-offset: 2px; }
+
+/* ── STALE WEEK BANNER (T2) ──────────────────────────────────────────────── */
+.stale-week-banner {
+  border: 1px solid rgba(0,158,78,.18);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+[data-theme="dark"] .stale-week-banner { background: #0f1f16; border-color: rgba(0,255,122,.18); color: var(--label2); }
 .wakeup-refresh:hover { color: var(--accent-h); }
 
 /* ── TOPBAR ───────────────────────────────────────────────────────────────── */

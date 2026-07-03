@@ -138,6 +138,12 @@
       <!-- BRIEF PANEL -->
       <div class="panel-view active" id="panel-brief">
 
+        <!-- Stale week fallback banner -->
+        <div class="wakeup-banner stale-week-banner hidden" id="staleWeekBanner">
+          <span>Showing last week's data (<strong id="staleWeekLabel"></strong>) — this week has no data yet. Uploading new files starts a fresh week.</span>
+          <button class="wakeup-close" id="staleWeekClose">✕</button>
+        </div>
+
         <!-- Empty state -->
         <div class="empty-state" id="emptyState">
           <div class="empty-icon">📋</div>
