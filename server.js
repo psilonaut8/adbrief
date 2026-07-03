@@ -13,7 +13,18 @@ const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComment
 const { normalizeSettings, buildSopReadout } = require('./lib/sop');
 
 const app = express();
+app.set('trust proxy', 1);
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+// Hand-rolled rate limiting: Map<ip, timestamps[]>, pruned on each hit.
+const rateLimitMaps = { comment: new Map(), reaction: new Map() };
+function rateLimit(map, ip, max, windowMs) {
+  const now = Date.now();
+  const hits = (map.get(ip) || []).filter((t) => now - t < windowMs);
+  hits.push(now);
+  map.set(ip, hits);
+  return hits.length <= max;
+}
 
 function getClient(req) {
   const c = (req.body?.client || req.query?.client || '');
@@ -564,14 +575,23 @@ app.get('/history', async (req, res) => {
 // Add a comment
 app.post('/comment', async (req, res) => {
   try {
-    const { weekKey, author, text } = req.body;
+    if (!rateLimit(rateLimitMaps.comment, req.ip, 10, 60000)) {
+      return res.status(429).json({ error: 'Too many requests — slow down.' });
+    }
+    let { weekKey, author, text } = req.body;
     if (!weekKey || !author || !text) return res.status(400).json({ error: 'weekKey, author, and text are required' });
+    author = String(author).trim();
+    text = String(text).trim();
+    if (!author || !text) return res.status(400).json({ error: 'weekKey, author, and text are required' });
+    if (author.length > 40) return res.status(400).json({ error: 'Name is too long (max 40 characters).' });
+    if (text.length > 2000) return res.status(400).json({ error: 'Comment is too long (max 2000 characters).' });
 
     const week = await loadWeek(weekKey);
     if (!week) return res.status(404).json({ error: 'Week not found' });
 
     const comments = week.comments || [];
-    comments.push({ author, text, createdAt: new Date().toISOString(), reactions: {} });
+    if (comments.length >= 200) return res.status(400).json({ error: 'Comment limit reached for this week.' });
+    comments.push({ id: crypto.randomBytes(6).toString('hex'), author, text, createdAt: new Date().toISOString(), reactions: {} });
     await saveComments(weekKey, comments);
 
     res.json({ ok: true, comments });
@@ -580,17 +600,25 @@ app.post('/comment', async (req, res) => {
   }
 });
 
+// Find a comment by id (preferred) or index (legacy fallback). Returns -1 if not found.
+function findCommentIndex(comments, id, index) {
+  if (id != null) return comments.findIndex((c) => c.id === id);
+  if (index != null && index >= 0 && index < comments.length) return index;
+  return -1;
+}
+
 // Edit a comment
 app.put('/comment', async (req, res) => {
   try {
-    const { weekKey, index, text } = req.body;
+    const { weekKey, id, index, text } = req.body;
     if (!text?.trim()) return res.status(400).json({ error: 'Text is required' });
     const week = await loadWeek(weekKey);
     if (!week) return res.status(404).json({ error: 'Week not found' });
     const comments = week.comments || [];
-    if (index < 0 || index >= comments.length) return res.status(400).json({ error: 'Invalid index' });
-    comments[index].text = text.trim();
-    comments[index].editedAt = new Date().toISOString();
+    const i = findCommentIndex(comments, id, index);
+    if (i < 0) return res.status(400).json({ error: 'Invalid index' });
+    comments[i].text = text.trim();
+    comments[i].editedAt = new Date().toISOString();
     await saveComments(weekKey, comments);
     res.json({ ok: true, comments });
   } catch (err) {
@@ -601,12 +629,13 @@ app.put('/comment', async (req, res) => {
 // Delete a comment
 app.delete('/comment', async (req, res) => {
   try {
-    const { weekKey, index } = req.body;
+    const { weekKey, id, index } = req.body;
     const week = await loadWeek(weekKey);
     if (!week) return res.status(404).json({ error: 'Week not found' });
     const comments = week.comments || [];
-    if (index < 0 || index >= comments.length) return res.status(400).json({ error: 'Invalid index' });
-    comments.splice(index, 1);
+    const i = findCommentIndex(comments, id, index);
+    if (i < 0) return res.status(400).json({ error: 'Invalid index' });
+    comments.splice(i, 1);
     await saveComments(weekKey, comments);
     res.json({ ok: true, comments });
   } catch (err) {
@@ -614,10 +643,18 @@ app.delete('/comment', async (req, res) => {
   }
 });
 
+const VALID_REACTIONS = ['👍', '❤️', '🔥'];
+
 // React to a comment
 app.post('/reaction', async (req, res) => {
   try {
+    if (!rateLimit(rateLimitMaps.reaction, req.ip, 30, 60000)) {
+      return res.status(429).json({ error: 'Too many requests — slow down.' });
+    }
     const { weekKey, index, emoji, delta } = req.body;
+    if (!VALID_REACTIONS.includes(emoji) || (delta !== 1 && delta !== -1)) {
+      return res.status(400).json({ error: 'Invalid reaction' });
+    }
     const week = await loadWeek(weekKey);
     if (!week) return res.status(404).json({ error: 'Week not found' });
     const comments = week.comments || [];

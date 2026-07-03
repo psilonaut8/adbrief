@@ -788,7 +788,7 @@ function _drawComments() {
         const res = await fetch('/comment', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ weekKey: currentWeekKey, index: i, text }),
+          body: JSON.stringify({ weekKey: currentWeekKey, id: briefComments[i]?.id, index: i, text }),
         });
         const data = await res.json();
         if (!res.ok) return alert(data.error);
@@ -805,7 +805,7 @@ function _drawComments() {
         const res = await fetch('/comment', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ weekKey: currentWeekKey, index: i }),
+          body: JSON.stringify({ weekKey: currentWeekKey, id: briefComments[i]?.id, index: i }),
         });
         const data = await res.json();
         if (!res.ok) return alert(data.error);
