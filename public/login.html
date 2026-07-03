@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdBrief — Log in</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script>if(localStorage.getItem('darkMode')==='1')document.documentElement.dataset.theme='dark'</script>
+  <style>
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 340px;
+      text-align: center;
+    }
+    .login-brand {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .login-brand em { color: var(--accent); font-style: normal; }
+    .login-sub {
+      font-size: 13px;
+      color: var(--label3);
+      margin-bottom: 20px;
+    }
+    .login-form { text-align: left; }
+    .login-error {
+      font-size: 12px;
+      color: #E5484D;
+      margin-top: 10px;
+      min-height: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="bcard login-card">
+      <div class="login-brand">Ad<em>Brief</em></div>
+      <div class="login-sub">Enter the password to continue</div>
+      <form class="login-form" id="loginForm">
+        <input type="password" id="passwordInput" class="input" placeholder="Password" autofocus />
+        <button type="submit" class="btn-primary" style="margin-top:12px">Log in</button>
+        <div class="login-error" id="loginError"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const input = document.getElementById('passwordInput');
+    const errorEl = document.getElementById('loginError');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.textContent = '';
+      const password = input.value;
+      if (!password) return;
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+        if (!res.ok) { errorEl.textContent = data.error || 'Wrong password.'; return; }
+        const next = new URLSearchParams(location.search).get('next');
+        location.href = next && next.startsWith('/') ? next : '/';
+      } catch {
+        errorEl.textContent = 'Network error. Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>

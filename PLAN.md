@@ -24,7 +24,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 
 # Phase 1 — Security & stability (do these first, in order)
 
-## T1 — Password gate on internal pages · Status: TODO
+## T1 — Password gate on internal pages · Status: DONE (2026-07-03)
 
 **Problem:** Every internal route (dashboard, workspace, delete endpoints, Meta import, `/clients` which returns share tokens) is publicly accessible. The client-facing token URLs are the only thing that should be public.
 

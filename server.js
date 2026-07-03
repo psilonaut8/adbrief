@@ -4,6 +4,7 @@ const multer = require('multer');
 const fetch = require('node-fetch');
 const path = require('path');
 const crypto = require('crypto');
+const cookieSession = require('cookie-session');
 
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
@@ -174,6 +175,54 @@ function pickAdDisplayName(rowName, metaAd) {
 }
 
 app.use(express.json());
+app.use(cookieSession({
+  name: 'adbrief_sess',
+  keys: [process.env.SESSION_SECRET || 'dev-secret'],
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+}));
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+// Single shared password gates every internal page/route. Client-facing token
+// URLs (and the endpoints they need) stay public. If APP_PASSWORD isn't set,
+// auth is disabled entirely so local dev without env vars still works.
+const AUTH_ENABLED = !!process.env.APP_PASSWORD;
+if (!AUTH_ENABLED) {
+  console.warn('AdBrief: APP_PASSWORD is not set — internal pages are NOT password protected.');
+}
+
+function isPublicPath(req) {
+  if (req.path === '/login') return true;
+  if (req.path === '/style.css') return true;
+  if (/^\/view\/[^/]+$/.test(req.path)) return true;
+  if (/^\/api\/view\/[^/]+$/.test(req.path)) return true;
+  if (req.method === 'POST' && (req.path === '/comment' || req.path === '/reaction')) return true;
+  return false;
+}
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.post('/login', (req, res) => {
+  if (!AUTH_ENABLED) return res.json({ ok: true });
+  const { password } = req.body || {};
+  if (password && password === process.env.APP_PASSWORD) {
+    req.session.authed = true;
+    return res.json({ ok: true });
+  }
+  res.status(401).json({ error: 'Wrong password.' });
+});
+
+app.use((req, res, next) => {
+  if (!AUTH_ENABLED) return next();
+  if (isPublicPath(req)) return next();
+  if (req.session?.authed) return next();
+
+  if (req.method === 'GET' && req.accepts('html')) {
+    return res.redirect('/login?next=' + encodeURIComponent(req.originalUrl));
+  }
+  res.status(401).json({ error: 'Not logged in' });
+});
 
 // Home page — serve client dashboard when no ?client= param
 app.get('/', (req, res, next) => {
