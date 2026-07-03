@@ -161,7 +161,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 
 # Phase 3 — Product value
 
-## T8 — Show creatives inside the brief (thumbnails + click-through) · Status: TODO
+## T8 — Show creatives inside the brief (thumbnails + click-through) · Status: DONE (2026-07-04, 6bdabe7, verified)
 
 **Problem:** The brief names ads but never shows them; users must hunt in the Data tab to see what "Summer Sale v2" looks like.
 
