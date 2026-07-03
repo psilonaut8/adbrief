@@ -141,7 +141,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] Replace checkbox ticked → only the new file's ads remain.
 - [ ] Ads enriched with thumbnails keep their `imageUrl` after a metric-only re-upload.
 
-## T7 — Visible error states (kill the silent catches) · Status: TODO
+## T7 — Visible error states (kill the silent catches) · Status: DONE (2026-07-03, 147e1c4, verified)
 
 **Problem:** ~10 `catch { /* silent */ }` blocks make server/Mongo failures look like empty data.
 
