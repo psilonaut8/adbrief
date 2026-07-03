@@ -194,12 +194,18 @@ async function uploadFiles(files) {
 
   const skipNote = skipped ? ` (${skipped} file${skipped > 1 ? 's' : ''} skipped)` : '';
   const updatedNote = totalUpdated ? `, ${totalUpdated} updated` : '';
-  const msg = `${totalAdded} added${updatedNote} — ${lastTotal} total${skipNote}`;
+  let msg = `${totalAdded} added${updatedNote} — ${lastTotal} total${skipNote}`;
   setStatus(msg);
   setDot('ok', `${lastTotal} ads ready`);
   document.getElementById('generateBtn').disabled = false;
   document.getElementById('clearBtn').style.display = 'block';
   setFileDropCopy(`${arr.length - skipped} of ${arr.length} files loaded`, 'Spreadsheet import ready');
+
+  const enrichResult = await autoEnrich();
+  if (enrichResult && enrichResult.enriched > 0) {
+    msg += ` · thumbnails matched for ${enrichResult.enriched}/${enrichResult.total} ads`;
+    setStatus(msg);
+  }
 }
 
 async function uploadFile(file) {
@@ -219,7 +225,7 @@ async function uploadFile(file) {
       if (data.columns.unrecognized.length) console.warn('[AdBrief] Unrecognized columns (ignored):', data.columns.unrecognized);
     }
     const updatedNote = data.updated ? `, ${data.updated} updated` : '';
-    const msg = data.total > data.added || data.updated
+    let msg = data.total > data.added || data.updated
       ? `${data.added} added${updatedNote} — ${data.total} total`
       : `${data.added} ads loaded`;
     setStatus(msg);
@@ -227,6 +233,12 @@ async function uploadFile(file) {
     document.getElementById('generateBtn').disabled = false;
     document.getElementById('clearBtn').style.display = 'block';
     setFileDropCopy(file.name, 'Spreadsheet import ready');
+
+    const enrichResult = await autoEnrich();
+    if (enrichResult && enrichResult.enriched > 0) {
+      msg += ` · thumbnails matched for ${enrichResult.enriched}/${enrichResult.total} ads`;
+      setStatus(msg);
+    }
   } catch {
     setStatus('Upload failed. Please try again.', true);
     setDot('error', 'Upload failed');
@@ -251,13 +263,19 @@ function setupSheetsLoad() {
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Load failed'); return; }
       currentWeekKey = data.weekKey;
       const updatedNote = data.updated ? `, ${data.updated} updated` : '';
-      const msg = data.total > data.added || data.updated
+      let msg = data.total > data.added || data.updated
         ? `${data.added} added${updatedNote} — ${data.total} total`
         : `${data.added} ads loaded`;
       setStatus(msg);
       setDot('ok', `${data.total} ads ready`);
       document.getElementById('generateBtn').disabled = false;
       document.getElementById('clearBtn').style.display = 'block';
+
+      const enrichResult = await autoEnrich();
+      if (enrichResult && enrichResult.enriched > 0) {
+        msg += ` · thumbnails matched for ${enrichResult.enriched}/${enrichResult.total} ads`;
+        setStatus(msg);
+      }
     } catch {
       setStatus('Could not load sheet.', true);
       setDot('error', 'Load failed');
@@ -1869,8 +1887,25 @@ async function setupClientSwitcher() {
 }
 
 // ── META API THUMBNAIL ENRICHMENT ──────────────────────────────────────────
+let metaConfigured = false;
+
+async function autoEnrich() {
+  if (!metaConfigured) return null;
+  try {
+    const r = await fetch('/meta/enrich?client=' + CLIENT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) return null;
+    return { enriched: data.enriched || 0, total: data.total || 0 };
+  } catch {
+    return null;
+  }
+}
+
 async function setupMetaEnrich() {
-  const enrichBtn = document.getElementById('metaEnrichBtn');
   const importBtn = document.getElementById('metaImportBtn');
   const rangeSel  = document.getElementById('metaImportRange');
   const changeBtn = document.getElementById('metaChangeBtn');
@@ -1902,36 +1937,8 @@ async function setupMetaEnrich() {
     setMetaStatus('', '');
   }
 
-  async function doEnrich() {
-    enrichBtn.disabled = true;
-    enrichBtn.textContent = 'Fetching…';
-    setMetaStatus('', '');
-    try {
-      const r = await fetch('/meta/enrich?client=' + CLIENT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      const data = await r.json();
-      if (!r.ok || !data.ok) {
-        setMetaStatus(data.error || 'Something went wrong.', 'error');
-      } else if (data.enriched === 0) {
-        setMetaStatus(data.message || 'No ads matched. Upload your CSV first.', 'warn');
-      } else {
-        setMetaStatus(`✓ Thumbnails added to ${data.enriched} of ${data.total} ads.`, 'ok');
-        if (dataAds.length) loadDataTab();
-      }
-    } catch {
-      setMetaStatus('Network error — check your connection.', 'error');
-    } finally {
-      enrichBtn.disabled = false;
-      enrichBtn.textContent = 'Fetch thumbnails';
-    }
-  }
-
   async function doImport(force) {
     importBtn.disabled = true;
-    enrichBtn.disabled = true;
     importBtn.textContent = 'Importing...';
     setMetaStatus('', '');
     try {
@@ -1943,8 +1950,7 @@ async function setupMetaEnrich() {
       const data = await r.json();
       if (r.status === 409 && data.needsConfirm) {
         importBtn.disabled = false;
-        enrichBtn.disabled = false;
-        importBtn.textContent = 'Import ads + stats';
+        importBtn.textContent = 'Import from Meta';
         if (confirm(data.message + ' Continue?')) {
           await doImport(true);
         }
@@ -1987,26 +1993,27 @@ async function setupMetaEnrich() {
       setMetaStatus('Network error. Check your connection.', 'error');
     } finally {
       importBtn.disabled = false;
-      enrichBtn.disabled = false;
-      importBtn.textContent = 'Import ads + stats';
+      importBtn.textContent = 'Import from Meta';
     }
   }
 
   if (importBtn) importBtn.addEventListener('click', () => doImport(false));
-  enrichBtn.addEventListener('click', doEnrich);
 
   changeBtn.addEventListener('click', async () => {
     if (!confirm('Disconnect Meta Ads? You can reconnect anytime via the setup page.')) return;
     try { await fetch('/meta/credentials?client=' + CLIENT, { method: 'DELETE' }); } catch {}
+    metaConfigured = false;
     showFields();
   });
 
   // On load: check if already configured
   try {
     const cfg = await fetch('/meta/config?client=' + CLIENT).then(r => r.json());
+    metaConfigured = !!cfg.configured;
     if (cfg.configured) showConnected(cfg.hint);
     else showFields();
   } catch {
+    metaConfigured = false;
     showFields();
   }
 }
