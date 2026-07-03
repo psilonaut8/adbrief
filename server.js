@@ -98,6 +98,45 @@ async function cacheThumbnails(client, ads) {
 const META_API_VERSION = 'v19.0';
 const META_DATE_PRESETS = new Set(['last_7d', 'last_14d', 'last_30d', 'this_month', 'last_month', 'maximum']);
 
+// Creative sub-fields requested on ad fetches. thumbnail_width/height lift Meta's
+// default 64px thumbnail_url to a usable size; effective_object_story_id lets us
+// resolve images for boosted page posts whose creative carries no inline media.
+const META_CREATIVE_FIELDS = 'creative.thumbnail_width(512).thumbnail_height(512)'
+  + '{image_url,thumbnail_url,object_story_spec,asset_feed_spec,effective_object_story_id}';
+
+// Boosted page posts ("Post: ...") reference an existing post via effective_object_story_id
+// and often return no inline image fields at all. Fetch each referenced post's full_picture
+// as a fallback. Best-effort: failures return an empty map and never break the import.
+async function fetchStoryPostImages(metaAds, token) {
+  const images = {};
+  const storyIds = [...new Set(
+    metaAds
+      .filter(ad => !pickCreativeImage(ad.creative) && ad.creative?.effective_object_story_id)
+      .map(ad => ad.creative.effective_object_story_id)
+  )];
+  for (let i = 0; i < storyIds.length; i += 8) {
+    const batch = storyIds.slice(i, i + 8);
+    const settled = await Promise.allSettled(batch.map(async storyId => {
+      const resp = await fetch(
+        `https://graph.facebook.com/${META_API_VERSION}/${encodeURIComponent(storyId)}?fields=full_picture`,
+        { timeout: 15000, headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await resp.json();
+      if (data?.full_picture) return { storyId, url: data.full_picture };
+      return null;
+    }));
+    for (const result of settled) {
+      if (result.status === 'fulfilled' && result.value) images[result.value.storyId] = result.value.url;
+    }
+  }
+  return images;
+}
+
+function storyImageFor(metaAd, storyImages) {
+  const storyId = metaAd?.creative?.effective_object_story_id;
+  return storyId ? storyImages[storyId] || null : null;
+}
+
 async function getMetaAuth(req) {
   const stored = await loadMetaCredentials(getClient(req));
   const token = (stored?.token && stored.token !== '') ? stored.token : (req.body.token || process.env.META_ACCESS_TOKEN);
@@ -967,7 +1006,7 @@ app.post('/meta/import', async (req, res) => {
     const datePreset = META_DATE_PRESETS.has(req.body?.datePreset) ? req.body.datePreset : 'last_30d';
 
     const adsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/ads`
-      + '?fields=id,name,effective_status,configured_status,creative{image_url,thumbnail_url,object_story_spec,asset_feed_spec}'
+      + `?fields=id,name,effective_status,configured_status,${META_CREATIVE_FIELDS}`
       + '&limit=500';
     const insightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/insights`
       + '?level=ad'
@@ -985,6 +1024,8 @@ app.post('/meta/import', async (req, res) => {
       : await fetchPerAdInsights(metaAds, datePreset, token);
     const insights = accountInsights.length ? accountInsights : perAdInsights;
 
+    const storyImages = await fetchStoryPostImages(metaAds, token);
+
     const adLookup = {};
     for (const metaAd of metaAds) {
       adLookup[String(metaAd.id)] = metaAd;
@@ -998,6 +1039,7 @@ app.post('/meta/import', async (req, res) => {
       const adId = String(row.ad_id || row.id || '');
       const metaAd = adLookup[adId] || {};
       const creativeImage = pickCreativeImage(metaAd.creative);
+      const storyImage = creativeImage ? null : storyImageFor(metaAd, storyImages);
       const result = firstActionValue(row.actions, [
         'purchase',
         'omni_purchase',
@@ -1025,8 +1067,8 @@ app.post('/meta/import', async (req, res) => {
         dateStart: row.date_start || null,
         dateEnd: row.date_stop || null,
         adStatus: metaAd.effective_status || metaAd.configured_status || null,
-        imageUrl: creativeImage?.url || null,
-        imageSource: creativeImage?.source || null,
+        imageUrl: creativeImage?.url || storyImage || null,
+        imageSource: creativeImage?.source || (storyImage ? 'story_full_picture' : null),
         source: 'meta_api',
       };
     }).filter(ad => ad.adName);
@@ -1086,7 +1128,7 @@ app.post('/meta/enrich', async (req, res) => {
     // Pull all ads with creative thumbnail/image URLs, handling pagination
     const metaAds = [];
     let url = `https://graph.facebook.com/v19.0/${actId}/ads`
-            + `?fields=id,name,creative{image_url,thumbnail_url,object_story_spec,asset_feed_spec}`
+            + `?fields=id,name,${META_CREATIVE_FIELDS}`
             + `&limit=200`;
     let pages = 0;
 
@@ -1112,13 +1154,15 @@ app.post('/meta/enrich', async (req, res) => {
     }
 
     // Build lookup maps: by ID and by name (lowercased)
+    const storyImages = await fetchStoryPostImages(metaAds, token);
     const byId   = {};
     const byName = {};
     for (const ma of metaAds) {
       const image = pickCreativeImage(ma.creative);
-      if (image?.url) {
-        byId[String(ma.id)] = image.url;
-        byName[String(ma.name || '').toLowerCase()] = image.url;
+      const url = image?.url || storyImageFor(ma, storyImages);
+      if (url) {
+        byId[String(ma.id)] = url;
+        byName[String(ma.name || '').toLowerCase()] = url;
       }
     }
 
