@@ -9,7 +9,7 @@ const cookieSession = require('cookie-session');
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
 const { parseContextFile } = require('./lib/context-parser');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveSopSettings, loadSopSettings, saveClient, listClients, findClientByToken, findClient, deleteClient } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveSopSettings, loadSopSettings, saveClient, listClients, findClientByToken, findClient, deleteClient, saveThumb, loadThumb } = require('./lib/storage');
 const { normalizeSettings, buildSopReadout } = require('./lib/sop');
 
 const app = express();
@@ -56,6 +56,43 @@ function mergeAds(prevAds, newAds, mode) {
   });
   const added = newAds.filter(a => !prevByName.has(a.adName));
   return { ads: [...ads, ...added], added: added.length, updated };
+}
+
+// Derives a stable, URL-safe key for a persisted thumbnail from the client slug
+// and the ad's Meta ad ID (preferred) or its normalized name (fallback).
+function thumbKey(client, ad) {
+  const normalized = String(ad.adName || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+  return `${client || 'default'}__${ad.adId || normalized}`;
+}
+
+// Downloads external creative images and persists them in the `thumbs` collection so
+// they survive Meta's expiring signed CDN URLs. Mutates ad.imageUrl to `/thumb/<key>`
+// on success; leaves the raw URL untouched on any failure (fetch error, timeout,
+// non-image content-type, or > 500KB). Runs sequentially in batches of 5.
+async function cacheThumbnails(client, ads) {
+  const targets = ads.filter(ad => /^https?:\/\//i.test(ad.imageUrl || ''));
+  for (let i = 0; i < targets.length; i += 5) {
+    const batch = targets.slice(i, i + 5);
+    for (const ad of batch) {
+      try {
+        const resp = await fetch(ad.imageUrl, { timeout: 15000 });
+        if (!resp.ok) continue;
+        const contentType = resp.headers.get('content-type') || '';
+        if (!contentType.startsWith('image/')) continue;
+        const buf = await resp.buffer();
+        if (buf.length > 500 * 1024) continue;
+        const key = thumbKey(client, ad);
+        await saveThumb(key, contentType, buf.toString('base64'));
+        ad.imageUrl = '/thumb/' + key;
+      } catch {
+        // leave ad.imageUrl as the raw URL — fallback per spec
+      }
+    }
+  }
 }
 
 const META_API_VERSION = 'v19.0';
@@ -236,6 +273,7 @@ function isPublicPath(req) {
   if (req.path === '/style.css') return true;
   if (/^\/view\/[^/]+$/.test(req.path)) return true;
   if (/^\/api\/view\/[^/]+$/.test(req.path)) return true;
+  if (/^\/thumb\/[^/]+$/.test(req.path)) return true;
   if (req.method === 'POST' && (req.path === '/comment' || req.path === '/reaction')) return true;
   return false;
 }
@@ -832,6 +870,20 @@ app.get('/api/view/:token', async (req, res) => {
   }
 });
 
+// Serve a persisted thumbnail (public — embedded on the client view page too)
+app.get('/thumb/:key', async (req, res) => {
+  try {
+    if (!/^[a-z0-9_-]+$/i.test(req.params.key)) return res.status(400).json({ error: 'Invalid key.' });
+    const doc = await loadThumb(req.params.key);
+    if (!doc) return res.status(404).json({ error: 'Not found.' });
+    res.set('Content-Type', doc.contentType);
+    res.set('Cache-Control', 'public, max-age=604800');
+    res.send(Buffer.from(doc.data, 'base64'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── SETUP PAGE ────────────────────────────────────────────────────────────────
 app.get('/setup', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'setup.html'));
@@ -984,6 +1036,8 @@ app.post('/meta/import', async (req, res) => {
       return res.json({ ok: true, imported: 0, weekKey, message: 'No Meta ads found for that date range.' });
     }
 
+    await cacheThumbnails(getClient(req), ads);
+
     const existing = await loadWeek(weekKey) || {};
     existing.ads = ads;
     existing.brief = null;
@@ -1083,6 +1137,8 @@ app.post('/meta/enrich', async (req, res) => {
         null;
       if (thumb) { ad.imageUrl = thumb; enriched++; }
     }
+
+    await cacheThumbnails(getClient(req), week.ads);
 
     await saveWeek(weekKey, week);
     res.json({ ok: true, enriched, total: week.ads.length });
