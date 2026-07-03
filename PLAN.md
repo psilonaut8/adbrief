@@ -199,7 +199,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] Publish → pill flips, client link now shows this week with edits.
 - [ ] A legacy week (brief, no `briefStatus`) still appears on the client link.
 
-## T10 — Merge the Meta sidebar into one coherent data-source flow · Status: TODO
+## T10 — Merge the Meta sidebar into one coherent data-source flow · Status: DONE (2026-07-04, 5f40278, verified)
 
 **Problem:** Section is labeled "Meta thumbnails" but its main button imports full stats and replaces data; a separate button patches thumbnails. Two mental models, one wrong label.
 
