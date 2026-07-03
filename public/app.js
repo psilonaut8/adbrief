@@ -2,6 +2,9 @@ const isViewOnly = new URLSearchParams(location.search).get('role') === 'summary
 const CLIENT = (new URLSearchParams(location.search).get('client') || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 32);
 let currentWeekKey = null;
 let weekAds = [];
+let currentBrief = null;
+let currentBriefStatus = null;
+let currentViewToken = null;
 let darkMode = localStorage.getItem('darkMode') === '1';
 let briefView = 'grid';
 let cardSortCol = 'roas';
@@ -82,6 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDarkToggle();
   setupBriefViewToggle();
   setupAdModal();
+  setupBriefActions();
   setupContextUpload();
   setupMetaEnrich();
   setupClientSwitcher();
@@ -295,11 +299,14 @@ function setupGenerateBtn() {
       if (!res.ok) { setStatus(data.error, true); setDot('error', 'Failed'); show('emptyState'); return; }
       currentWeekKey = data.weekKey;
       setDot('ok', 'Brief ready');
-      renderBrief(data.brief, data.weekKey);
+      renderBrief(data.brief, data.weekKey, null, 'draft');
       try {
         const wres = await fetch('/week/current?client=' + CLIENT);
         const wdata = await wres.json();
-        if (wres.ok && wdata.week) weekAds = wdata.week.ads || [];
+        if (wres.ok && wdata.week) {
+          weekAds = wdata.week.ads || [];
+          currentViewToken = wdata.viewToken || null;
+        }
       } catch { /* thumbnails just won't show until next load */ }
     } catch {
       hide('loading');
@@ -320,6 +327,7 @@ async function loadCurrentWeek() {
     if (!data.week) return;
     currentWeekKey = data.weekKey;
     weekAds = data.week.ads || [];
+    currentViewToken = data.viewToken || null;
     if (data.week.ads?.length) {
       const hasMetrics = hasUsableMetrics(data.week.ads);
       setStatus(`${data.week.ads.length} ads loaded`);
@@ -333,7 +341,7 @@ async function loadCurrentWeek() {
     } else {
       hide('staleWeekBanner');
     }
-    if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments);
+    if (data.week.brief) renderBrief(data.week.brief, data.weekKey, data.week.comments, data.week.briefStatus);
   } catch {
     hide('loading');
     hide('emptyState');
@@ -342,10 +350,13 @@ async function loadCurrentWeek() {
 }
 
 // ── RENDER BRIEF ───────────────────────────────────────────────────────────
-function renderBrief(brief, weekKey, existingComments) {
+function renderBrief(brief, weekKey, existingComments, briefStatus) {
   currentWeekKey = weekKey;
-  document.getElementById('briefTitle').textContent = `Creative Brief — ${displayKey(weekKey)}`;
+  currentBrief = brief;
+  currentBriefStatus = briefStatus || 'published'; // undefined/legacy briefs count as published
+  document.getElementById('briefTitle').firstChild.textContent = `Creative Brief — ${displayKey(weekKey)} `;
   document.getElementById('briefMeta').textContent = 'Generated from your Meta Ads export';
+  renderBriefHeaderControls();
 
   // Summary — array of bullets (new) or legacy string
   const summaryEl = document.getElementById('briefSummary');
@@ -421,6 +432,180 @@ function renderAdList(id, items, color, tpl) {
   });
 }
 
+// ── DRAFT/PUBLISH + EDIT ─────────────────────────────────────────────────────
+function renderBriefHeaderControls() {
+  const pill = document.getElementById('briefStatusPill');
+  const isDraft = currentBriefStatus === 'draft';
+  pill.textContent = isDraft ? 'Draft' : 'Published';
+  pill.className = 'status-badge-pill ' + (isDraft ? 'status-undelivered' : 'status-active');
+
+  if (isViewOnly) {
+    hide('publishBtn'); hide('editBriefBtn'); hide('saveBriefBtn'); hide('cancelBriefBtn');
+    hide('clientLinkRow');
+    return;
+  }
+
+  if (isDraft) show('publishBtn'); else hide('publishBtn');
+  show('editBriefBtn');
+  hide('saveBriefBtn');
+  hide('cancelBriefBtn');
+
+  if (currentViewToken && !isDraft) {
+    document.getElementById('clientLinkUrl').textContent = `${location.origin}/view/${currentViewToken}`;
+    show('clientLinkRow');
+  } else {
+    hide('clientLinkRow');
+  }
+}
+
+function setupBriefActions() {
+  document.getElementById('publishBtn').addEventListener('click', async () => {
+    if (!currentWeekKey) return;
+    try {
+      const res = await fetch('/brief/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client: CLIENT, weekKey: currentWeekKey }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Could not publish.'); return; }
+      currentBriefStatus = 'published';
+      renderBriefHeaderControls();
+    } catch { alert('Could not publish. Please try again.'); }
+  });
+
+  document.getElementById('editBriefBtn').addEventListener('click', () => enterEditMode());
+  document.getElementById('cancelBriefBtn').addEventListener('click', () => exitEditMode());
+  document.getElementById('saveBriefBtn').addEventListener('click', () => saveBriefEdits());
+
+  document.getElementById('clientLinkCopyBtn').addEventListener('click', () => {
+    const url = document.getElementById('clientLinkUrl').textContent;
+    if (!url) return;
+    const btn = document.getElementById('clientLinkCopyBtn');
+    navigator.clipboard.writeText(url).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    }).catch(() => {
+      prompt('Copy this link:', url);
+    });
+  });
+}
+
+function enterEditMode() {
+  if (!currentBrief) return;
+  document.getElementById('editBriefBtn').classList.add('hidden');
+  document.getElementById('publishBtn').classList.add('hidden');
+  show('saveBriefBtn');
+  show('cancelBriefBtn');
+  renderBriefEditable(currentBrief);
+}
+
+function exitEditMode() {
+  renderBrief(currentBrief, currentWeekKey, briefComments, currentBriefStatus);
+}
+
+// List-section field maps: which fields to render/collect per section.
+const BRIEF_LIST_FIELDS = {
+  topPerformers:   ['adName', 'metric', 'why', 'action'],
+  underperformers: ['adName', 'metric', 'why', 'action'],
+  fatigueAlerts:   ['adName', 'metric', 'why', 'action'],
+  retireNow:       ['adName', 'metric', 'reason'],
+  makeNext:        ['concept', 'rationale'],
+};
+const BRIEF_TEXTAREA_FIELDS = new Set(['why', 'action', 'rationale', 'reason']);
+
+function renderBriefEditable(brief) {
+  // Summary: textareas, one per bullet (legacy string summaries become a single bullet)
+  const summaryItems = Array.isArray(brief.summary) ? brief.summary : (brief.summary ? [brief.summary] : []);
+  const summaryEl = document.getElementById('briefSummary');
+  summaryEl.className = 'summary-bullets-edit';
+  summaryEl.innerHTML = summaryItems.map((s, i) => `
+    <div class="edit-item-row">
+      <textarea class="input edit-summary-item" rows="3" data-i="${i}">${esc(s)}</textarea>
+      <button class="edit-remove-btn" data-summary-remove="${i}" title="Remove">✕</button>
+    </div>
+  `).join('') + `<button class="btn-outline edit-add-btn" id="addSummaryBtn">+ Add bullet</button>`;
+
+  Object.keys(BRIEF_LIST_FIELDS).forEach(section => {
+    renderEditableList(section, brief[section] || []);
+  });
+
+  summaryEl.querySelectorAll('[data-summary-remove]').forEach(btn => {
+    btn.addEventListener('click', () => { btn.closest('.edit-item-row').remove(); });
+  });
+  document.getElementById('addSummaryBtn').addEventListener('click', () => {
+    const row = document.createElement('div');
+    row.className = 'edit-item-row';
+    row.innerHTML = `<textarea class="input edit-summary-item" rows="3"></textarea><button class="edit-remove-btn" title="Remove">✕</button>`;
+    row.querySelector('.edit-remove-btn').addEventListener('click', () => row.remove());
+    document.getElementById('addSummaryBtn').insertAdjacentElement('beforebegin', row);
+  });
+}
+
+function renderEditableList(section, items) {
+  const el = document.getElementById(section);
+  const fields = BRIEF_LIST_FIELDS[section];
+  el.innerHTML = items.map((item) => editableItemHtml(fields, item)).join('');
+  el.querySelectorAll('.edit-remove-btn').forEach(btn => {
+    btn.addEventListener('click', () => { btn.closest('.ad-item-edit').remove(); });
+  });
+}
+
+function editableItemHtml(fields, item) {
+  const fieldsHtml = fields.map(f => {
+    const val = esc(item?.[f]);
+    if (BRIEF_TEXTAREA_FIELDS.has(f)) {
+      return `<textarea class="input edit-field" rows="3" data-field="${f}" placeholder="${f}">${val}</textarea>`;
+    }
+    return `<input class="input edit-field" type="text" data-field="${f}" placeholder="${f}" value="${val}">`;
+  }).join('');
+  return `<div class="ad-item-edit">${fieldsHtml}<button class="edit-remove-btn" title="Remove item">✕</button></div>`;
+}
+
+function collectBriefFromEdit() {
+  const brief = {};
+
+  const summaryVals = [...document.querySelectorAll('.edit-summary-item')]
+    .map(t => t.value.trim())
+    .filter(Boolean);
+  brief.summary = summaryVals;
+
+  Object.keys(BRIEF_LIST_FIELDS).forEach(section => {
+    const fields = BRIEF_LIST_FIELDS[section];
+    const rows = document.querySelectorAll(`#${section} .ad-item-edit`);
+    const items = [];
+    rows.forEach(row => {
+      const item = {};
+      let hasValue = false;
+      fields.forEach(f => {
+        const input = row.querySelector(`[data-field="${f}"]`);
+        const val = input ? input.value.trim() : '';
+        if (val) hasValue = true;
+        item[f] = val;
+      });
+      if (hasValue) items.push(item);
+    });
+    brief[section] = items;
+  });
+
+  return brief;
+}
+
+async function saveBriefEdits() {
+  const brief = collectBriefFromEdit();
+  try {
+    const res = await fetch('/brief/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client: CLIENT, weekKey: currentWeekKey, brief }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Could not save changes.'); return; }
+    currentBrief = data.brief;
+    renderBrief(currentBrief, currentWeekKey, briefComments, currentBriefStatus);
+  } catch { alert('Could not save changes. Please try again.'); }
+}
+
 // ── HISTORY ────────────────────────────────────────────────────────────────
 async function loadHistory() {
   const grid = document.getElementById('historyGrid');
@@ -490,7 +675,7 @@ async function loadWeek(weekKey) {
     hide('loading');
     if (!res.ok || !data.week?.brief) { show('emptyState'); return; }
     weekAds = data.week.ads || [];
-    renderBrief(data.week.brief, weekKey, data.week.comments);
+    renderBrief(data.week.brief, weekKey, data.week.comments, data.week.briefStatus);
   } catch { hide('loading'); show('emptyState'); }
 }
 

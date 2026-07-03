@@ -696,6 +696,24 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
   flex-shrink: 0;
 }
 
+/* ── CLIENT LINK ROW ──────────────────────────────────────────────────────── */
+.client-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--label3);
+}
+.client-link-row #clientLinkUrl {
+  color: var(--label2);
+  font-weight: 600;
+}
+.client-link-row .btn-outline {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
 /* ── SUMMARY CARD ─────────────────────────────────────────────────────────── */
 .summary-card { grid-column: 1 / -1; border-left: 3px solid var(--accent); }
 .retire-card  { grid-column: 1 / -1; }
@@ -786,6 +804,36 @@ textarea.input { resize: vertical; min-height: 72px; line-height: 1.5; }
 }
 
 .empty-note { font-size: 13px; color: var(--label4); font-style: italic; }
+
+/* ── BRIEF EDIT MODE ──────────────────────────────────────────────────────── */
+.ad-item-edit {
+  border-radius: var(--r-md);
+  padding: 12px;
+  border: 1.5px solid var(--sep);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  margin-bottom: 10px;
+}
+.ad-item-edit .edit-field { font-size: 13px; }
+.edit-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: none;
+  color: var(--label4);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.edit-remove-btn:hover { color: var(--red); }
+.summary-bullets-edit { display: flex; flex-direction: column; gap: 8px; }
+.edit-item-row { display: flex; align-items: flex-start; gap: 8px; }
+.edit-item-row textarea { flex: 1; }
+.edit-add-btn { align-self: flex-start; margin-top: 4px; }
 
 /* ── EMPTY STATE ──────────────────────────────────────────────────────────── */
 .empty-state {

@@ -9,7 +9,7 @@ const cookieSession = require('cookie-session');
 const { parseBuffer, parseCSVText } = require('./lib/parser');
 const { generateBrief } = require('./lib/brief');
 const { parseContextFile } = require('./lib/context-parser');
-const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveSopSettings, loadSopSettings, saveClient, listClients, findClientByToken, deleteClient } = require('./lib/storage');
+const { getWeekKey, saveWeek, loadWeek, listWeeks, getRecentHistory, saveComments, deleteWeek, saveContextDoc, loadContextDocs, deleteContextDoc, saveMetaCredentials, loadMetaCredentials, deleteMetaCredentials, saveSopSettings, loadSopSettings, saveClient, listClients, findClientByToken, findClient, deleteClient } = require('./lib/storage');
 const { normalizeSettings, buildSopReadout } = require('./lib/sop');
 
 const app = express();
@@ -352,6 +352,7 @@ app.post('/generate-brief', async (req, res) => {
     }
 
     week.brief = result.brief;
+    week.briefStatus = 'draft';
     week.generatedAt = new Date().toISOString();
     await saveWeek(weekKey, week);
 
@@ -362,14 +363,75 @@ app.post('/generate-brief', async (req, res) => {
   }
 });
 
+// Validates that a weekKey belongs to the requesting client (same rule as /generate-brief).
+function weekKeyBelongsToClient(client, weekKey) {
+  return client ? weekKey.startsWith(`${client}__`) : !weekKey.includes('__');
+}
+
+// Publish a draft brief so it appears on the client-facing link
+app.post('/brief/publish', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const weekKey = String(req.body.weekKey || '');
+    if (!weekKey || !weekKeyBelongsToClient(client, weekKey)) {
+      return res.status(400).json({ error: 'weekKey does not belong to this client.' });
+    }
+    const week = await loadWeek(weekKey);
+    if (!week || !week.brief) return res.status(404).json({ error: 'Week not found or has no brief.' });
+    week.briefStatus = 'published';
+    await saveWeek(weekKey, week);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Edit a brief's content (does not change its draft/published status)
+app.post('/brief/update', async (req, res) => {
+  try {
+    const client = getClient(req);
+    const weekKey = String(req.body.weekKey || '');
+    if (!weekKey || !weekKeyBelongsToClient(client, weekKey)) {
+      return res.status(400).json({ error: 'weekKey does not belong to this client.' });
+    }
+    const week = await loadWeek(weekKey);
+    if (!week || !week.brief) return res.status(404).json({ error: 'Week not found or has no brief.' });
+
+    const input = req.body.brief;
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      return res.status(400).json({ error: 'brief must be an object.' });
+    }
+    const listKeys = ['topPerformers', 'underperformers', 'fatigueAlerts', 'makeNext', 'retireNow'];
+    for (const key of listKeys) {
+      if (input[key] !== undefined && !Array.isArray(input[key])) {
+        return res.status(400).json({ error: `${key} must be an array.` });
+      }
+    }
+    if (input.summary !== undefined && !Array.isArray(input.summary) && typeof input.summary !== 'string') {
+      return res.status(400).json({ error: 'summary must be an array or string.' });
+    }
+    const brief = {};
+    for (const key of [...listKeys, 'summary']) {
+      if (input[key] !== undefined) brief[key] = input[key];
+    }
+
+    week.brief = brief;
+    await saveWeek(weekKey, week);
+    res.json({ ok: true, brief });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get current week's data and brief
 app.get('/week/current', async (req, res) => {
   try {
     const client = getClient(req);
+    const viewToken = client ? (await findClient(client))?.token || null : null;
     const currentWeekKey = clientKey(client, getWeekKey());
     const week = await loadWeek(currentWeekKey);
     if (week?.ads?.length) {
-      return res.json({ weekKey: currentWeekKey, week, isCurrentWeek: true });
+      return res.json({ weekKey: currentWeekKey, week, isCurrentWeek: true, viewToken });
     }
 
     // Current week has no ads — fall back to the most recent week that has data
@@ -378,11 +440,11 @@ app.get('/week/current', async (req, res) => {
       if (key === currentWeekKey) continue;
       const candidate = await loadWeek(key);
       if (candidate?.ads?.length) {
-        return res.json({ weekKey: key, week: candidate, isCurrentWeek: false, currentWeekKey });
+        return res.json({ weekKey: key, week: candidate, isCurrentWeek: false, currentWeekKey, viewToken });
       }
     }
 
-    res.json({ weekKey: currentWeekKey, week: week || null, isCurrentWeek: true });
+    res.json({ weekKey: currentWeekKey, week: week || null, isCurrentWeek: true, viewToken });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -694,11 +756,20 @@ app.get('/api/view/:token', async (req, res) => {
     if (!client) return res.status(404).json({ error: 'Link not found or expired.' });
 
     const weeks = await listWeeks(client.slug);
-    const latest = weeks[0];
+    let latest = null, weekData = null;
+    for (const key of weeks.slice(0, 12)) {
+      const candidate = await loadWeek(key);
+      if (!candidate?.brief) continue;
+      // Legacy weeks (brief present, no briefStatus) count as published.
+      if (candidate.briefStatus === 'published' || candidate.briefStatus === undefined) {
+        latest = key;
+        weekData = candidate;
+        break;
+      }
+    }
     if (!latest) return res.json({ clientName: client.name, week: null });
 
-    const weekData = await loadWeek(latest);
-    const weekKey  = latest.includes('__') ? latest.split('__').slice(1).join('__') : latest;
+    const weekKey = latest.includes('__') ? latest.split('__').slice(1).join('__') : latest;
 
     const adImages = (weekData?.ads || [])
       .filter(a => a.imageUrl != null)

@@ -167,14 +167,22 @@
         <div id="briefOutput" class="hidden">
           <div class="content-header">
             <div>
-              <h1 id="briefTitle">Weekly Creative Brief</h1>
+              <h1 id="briefTitle">Weekly Creative Brief <span class="status-badge-pill" id="briefStatusPill"></span></h1>
               <div class="content-meta" id="briefMeta"></div>
+              <div class="client-link-row hidden no-print" id="clientLinkRow">
+                <span>Client link: <span id="clientLinkUrl"></span></span>
+                <button class="btn-outline" id="clientLinkCopyBtn">Copy</button>
+              </div>
             </div>
             <div class="brief-header-right no-print">
               <div class="view-toggle">
                 <button class="view-btn active" data-bview="grid">⊞ Grid</button>
                 <button class="view-btn" data-bview="list">≡ List</button>
               </div>
+              <button class="btn-outline hidden" id="publishBtn">Publish</button>
+              <button class="btn-outline hidden" id="editBriefBtn">Edit</button>
+              <button class="btn-outline hidden" id="saveBriefBtn">Save changes</button>
+              <button class="btn-outline hidden" id="cancelBriefBtn">Cancel</button>
               <button class="btn-outline" onclick="window.print()">Export PDF</button>
             </div>
           </div>
