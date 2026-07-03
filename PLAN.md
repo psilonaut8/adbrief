@@ -179,7 +179,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 - [ ] Brief items whose names don't match any ad render exactly as before (no cursor change, no broken layout).
 - [ ] Client view page shows thumbnails; response payload contains only names + image URLs.
 
-## T9 — Draft/publish workflow + brief editing · Status: TODO
+## T9 — Draft/publish workflow + brief editing · Status: DONE (2026-07-04, 0053670, verified)
 
 **Problem:** Raw AI output is instantly visible on the client link; operators can't fix wording or hide a bad recommendation first.
 
