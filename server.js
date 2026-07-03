@@ -14,7 +14,7 @@ const { normalizeSettings, buildSopReadout } = require('./lib/sop');
 
 const app = express();
 app.set('trust proxy', 1);
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 
 // Hand-rolled rate limiting: Map<ip, timestamps[]>, pruned on each hit.
 const rateLimitMaps = { comment: new Map(), reaction: new Map() };
@@ -81,11 +81,12 @@ async function getMetaAuth(req) {
   };
 }
 
-async function fetchMetaPages(startUrl) {
+async function fetchMetaPages(startUrl, token) {
   const rows = [];
   let url = startUrl;
-  while (url) {
-    const resp = await fetch(url);
+  let pages = 0;
+  while (url && pages < 25) {
+    const resp = await fetch(url, { timeout: 30000, headers: { Authorization: `Bearer ${token}` } });
     const data = await resp.json();
     if (data.error) {
       const err = new Error(data.error.message || 'Meta API error');
@@ -93,7 +94,14 @@ async function fetchMetaPages(startUrl) {
       throw err;
     }
     if (Array.isArray(data.data)) rows.push(...data.data);
-    url = data.paging?.next || null;
+    pages++;
+    let next = data.paging?.next || null;
+    if (next) {
+      const nextUrl = new URL(next);
+      nextUrl.searchParams.delete('access_token');
+      next = nextUrl.toString();
+    }
+    url = next;
   }
   return rows;
 }
@@ -130,15 +138,13 @@ function hasMetaMetrics(ad) {
 
 async function fetchPerAdInsights(metaAds, datePreset, token) {
   const rows = [];
-  const accessToken = encodeURIComponent(token);
   for (let i = 0; i < metaAds.length; i += 8) {
     const batch = metaAds.slice(i, i + 8);
     const settled = await Promise.allSettled(batch.map(async metaAd => {
       const url = `https://graph.facebook.com/${META_API_VERSION}/${metaAd.id}/insights`
         + '?fields=spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,purchase_roas,website_purchase_roas,date_start,date_stop'
-        + `&date_preset=${encodeURIComponent(datePreset)}`
-        + `&access_token=${accessToken}`;
-      const insightRows = await fetchMetaPages(url);
+        + `&date_preset=${encodeURIComponent(datePreset)}`;
+      const insightRows = await fetchMetaPages(url, token);
       return insightRows.map(row => ({ ...row, ad_id: metaAd.id, ad_name: pickAdDisplayName(metaAd.name, metaAd) }));
     }));
     for (const result of settled) {
@@ -839,8 +845,8 @@ app.post('/meta/test', async (req, res) => {
     const { accountId, token } = req.body || {};
     if (!accountId || !token) return res.status(400).json({ error: 'accountId and token are required.' });
     const actId = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
-    const url = `https://graph.facebook.com/v19.0/${actId}?fields=name,account_status&access_token=${token}`;
-    const r = await fetch(url);
+    const url = `https://graph.facebook.com/v19.0/${actId}?fields=name,account_status`;
+    const r = await fetch(url, { timeout: 30000, headers: { Authorization: `Bearer ${token}` } });
     const data = await r.json();
     if (data.error) {
       const msg = data.error.message || 'Meta API error.';
@@ -907,20 +913,19 @@ app.post('/meta/import', async (req, res) => {
     }
 
     const datePreset = META_DATE_PRESETS.has(req.body?.datePreset) ? req.body.datePreset : 'last_30d';
-    const accessToken = encodeURIComponent(token);
 
     const adsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/ads`
       + '?fields=id,name,effective_status,configured_status,creative{image_url,thumbnail_url,object_story_spec,asset_feed_spec}'
-      + `&limit=500&access_token=${accessToken}`;
+      + '&limit=500';
     const insightsUrl = `https://graph.facebook.com/${META_API_VERSION}/${actId}/insights`
       + '?level=ad'
       + '&fields=ad_id,ad_name,spend,impressions,reach,frequency,clicks,ctr,cpc,cpm,actions,purchase_roas,website_purchase_roas,date_start,date_stop'
       + `&date_preset=${encodeURIComponent(datePreset)}`
-      + `&limit=500&access_token=${accessToken}`;
+      + '&limit=500';
 
     const [metaAds, accountInsights] = await Promise.all([
-      fetchMetaPages(adsUrl),
-      fetchMetaPages(insightsUrl),
+      fetchMetaPages(adsUrl, token),
+      fetchMetaPages(insightsUrl, token),
     ]);
 
     const perAdInsights = accountInsights.length
@@ -1028,17 +1033,24 @@ app.post('/meta/enrich', async (req, res) => {
     const metaAds = [];
     let url = `https://graph.facebook.com/v19.0/${actId}/ads`
             + `?fields=id,name,creative{image_url,thumbnail_url,object_story_spec,asset_feed_spec}`
-            + `&limit=200`
-            + `&access_token=${encodeURIComponent(token)}`;
+            + `&limit=200`;
+    let pages = 0;
 
-    while (url) {
-      const resp = await fetch(url);
+    while (url && pages < 25) {
+      const resp = await fetch(url, { timeout: 30000, headers: { Authorization: `Bearer ${token}` } });
       const data = await resp.json();
       if (data.error) {
         return res.status(400).json({ error: data.error.message || 'Meta API error', meta: data.error });
       }
       if (Array.isArray(data.data)) metaAds.push(...data.data);
-      url = data.paging?.next || null;
+      pages++;
+      let next = data.paging?.next || null;
+      if (next) {
+        const nextUrl = new URL(next);
+        nextUrl.searchParams.delete('access_token');
+        next = nextUrl.toString();
+      }
+      url = next;
     }
 
     if (!metaAds.length) {
@@ -1078,6 +1090,13 @@ app.post('/meta/enrich', async (req, res) => {
     console.error('Meta enrich error:', err);
     res.status(500).json({ error: err.message });
   }
+});
+
+app.use((err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ error: 'File too large — export a smaller date range (max 15MB).' });
+  }
+  next(err);
 });
 
 const PORT = process.env.PORT || 3000;
