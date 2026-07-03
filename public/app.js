@@ -1670,7 +1670,7 @@ async function setupMetaEnrich() {
     }
   }
 
-  if (importBtn) importBtn.addEventListener('click', doImport);
+  if (importBtn) importBtn.addEventListener('click', () => doImport(false));
   enrichBtn.addEventListener('click', doEnrich);
 
   changeBtn.addEventListener('click', async () => {
