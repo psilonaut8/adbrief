@@ -104,7 +104,7 @@ A senior reviewer will verify each task after completion using the "Verify" sect
 
 # Phase 2 — Data trust
 
-## T5 — Correct aggregate metrics (weighted, typed results) · Status: TODO
+## T5 — Correct aggregate metrics (weighted, typed results) · Status: DONE (2026-07-03, 7b0a422, verified)
 
 **Problem:** Summary bar and Trends show unweighted per-ad means; mixed result types get summed under one label.
 
